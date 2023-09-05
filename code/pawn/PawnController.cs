@@ -126,9 +126,9 @@ public partial class PawnController : EntityComponent<Pawn>
 		var forwardSpeed = Vector3.Dot(input, moveVector.Normal);
 		var maxSideFraction = MathF.Min(JetMaxSideFraction, moveVector.Length);
 
-		if (forwardSpeed > JetMaxForwardSpeed)
+		if (forwardSpeed >= JetMaxForwardSpeed)
 			sideFraction = 0f;
-		else if (forwardSpeed < 0f)
+		else if (forwardSpeed <= 0f)
 			sideFraction = maxSideFraction;
 		else
 			sideFraction = MathF.Min(1 - (forwardSpeed / JetMaxForwardSpeed), maxSideFraction);
