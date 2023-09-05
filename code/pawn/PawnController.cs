@@ -14,11 +14,11 @@ public partial class PawnController : EntityComponent<Pawn>
 	public const float MaxEnergy = 30f;
 	public const float JetEnergyCutoff = 5f;
 	public const float JetEnergyDrain = 17f;
-	public const float JetEnergyCharge = 21f;
-	public const float JetEnergyChargeDelay = .5f;
+	public const float JetEnergyCharge = 15f;
+	public const float JetEnergyChargeDelay = .3f;
 	public const float JetAcceleration = 1200f;
 	public const float JetMaxSideFraction = .8f;
-	public const float JetMaxForwardSpeed = 780f;
+	public const float JetMaxForwardSpeed = 900f;
 
 	/// <summary>
 	/// The maximum dot product between the velocity and ground normal for ground to be considered valid.
