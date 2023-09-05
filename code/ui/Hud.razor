@@ -1,0 +1,29 @@
+@using Sandbox;
+@using Sandbox.UI;
+@using System;
+
+@namespace MyGame
+@inherits RootPanel
+@attribute [StyleSheet]
+
+<root>
+    <ChatBox/>
+    <VoiceList/>
+
+    <div class="header">
+        <label>Shooter Game</label>
+        <label class="subtitle">A template to kick start the production of your own games.</label>
+        <label @ref=EnergyLabel>Energy</label>
+    </div>
+</root>
+
+@code
+{
+    public Label EnergyLabel { get; set; }
+
+    public override void Tick()
+    {
+        var Pawn = (Pawn)Game.LocalPawn;
+        EnergyLabel.Text = $"Energy: {MathF.Truncate(Pawn.Controller.Energy)}";
+    }
+}
