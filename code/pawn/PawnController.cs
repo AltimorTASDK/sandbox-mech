@@ -32,13 +32,13 @@ public partial class PawnController : EntityComponent<Pawn>
 
 	bool IsJetting => !JetDepleted && Input.Down("jump");
 
-        [Net, Predicted]
+	[Net, Predicted]
 	public float Energy { get; protected set; } = MaxEnergy;
 
-        [Net, Predicted]
+	[Net, Predicted]
 	bool JetDepleted { get; set; }
 
-        [Predicted]
+	[Predicted]
 	float TimeSinceLastJet { get; set; }
 
 	TraceResult GroundTrace;
