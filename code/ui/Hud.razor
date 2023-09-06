@@ -11,19 +11,23 @@
     <VoiceList/>
 
     <div class="header">
-        <label>Shooter Game</label>
-        <label class="subtitle">A template to kick start the production of your own games.</label>
-        <label @ref=EnergyLabel>Energy</label>
+        <label @ref=EnergyLabel></label>
+        <label @ref=Speed2DLabel></label>
+        <label @ref=Speed3DLabel></label>
     </div>
 </root>
 
 @code
 {
     public Label EnergyLabel { get; set; }
+    public Label Speed2DLabel { get; set; }
+    public Label Speed3DLabel { get; set; }
 
     public override void Tick()
     {
         var Pawn = (Pawn)Game.LocalPawn;
         EnergyLabel.Text = $"Energy: {MathF.Truncate(Pawn.Controller.Energy)}";
+        Speed2DLabel.Text = $"Speed 2D: {MathF.Round(Pawn.Velocity.WithZ(0).Length)}";
+        Speed3DLabel.Text = $"Speed 3D: {MathF.Round(Pawn.Velocity.Length)}";
     }
 }
