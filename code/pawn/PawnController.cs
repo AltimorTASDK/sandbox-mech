@@ -11,6 +11,11 @@ public partial class PawnController : EntityComponent<Pawn>
 	public const float StepGroundAngle = 45f;
 	public const float Gravity = 800f;
 	public const float FrictionMult = 4f;
+	public const float MaxSpeed = 400f;
+	public const float Acceleration = 5f;
+	public const float AirAcceleration = .5f;
+	public const float StopSpeed = 100.0f;
+	public const float SlipSpeed = 500.0f;
 
 	public const float MaxEnergy = 30f;
 	public const float JetEnergyCutoff = 5f;
@@ -76,11 +81,11 @@ public partial class PawnController : EntityComponent<Pawn>
 		{
 			Entity.Velocity -= GroundTrace.Normal * Entity.Velocity.Dot(GroundTrace.Normal);
 			Entity.Velocity = ApplyFriction(Entity.Velocity, FrictionMult, Time.Delta);
-			Entity.Velocity = Accelerate(Entity.Velocity, moveVector.Normal, moveVector.Length, 400f, 5f);
+			Entity.Velocity = Accelerate(Entity.Velocity, moveVector.Normal, moveVector.Length, MaxSpeed, Acceleration);
 		}
 		else
 		{
-			Entity.Velocity = Accelerate(Entity.Velocity, moveVector.Normal, moveVector.Length, 400f, .5f);
+			Entity.Velocity = Accelerate(Entity.Velocity, moveVector.Normal, moveVector.Length, MaxSpeed, AirAcceleration);
 		}
 
 		var mh = new MoveHelper(Entity.Position, Entity.Velocity);
@@ -162,14 +167,11 @@ public partial class PawnController : EntityComponent<Pawn>
 
 	Vector3 ApplyFriction(Vector3 input, float frictionAmount, float deltaTime)
 	{
-		float StopSpeed = 100.0f;
-
 		var speed = input.Length;
 		if (speed < 0.1f) return Vector3.Zero;
 
-		// Bleed off some speed, but if we have less than the bleed
-		// threshold, bleed the threshold amount.
-		float control = (speed < StopSpeed) ? StopSpeed : speed;
+		// Scale friction with speed within range.
+		var control = MathF.Min(MathF.Max(speed, StopSpeed), SlipSpeed);
 
 		// Add the amount to the drop amount.
 		var drop = control * deltaTime * frictionAmount;
@@ -178,7 +180,7 @@ public partial class PawnController : EntityComponent<Pawn>
 			drop *= GroundTrace.Normal.z;
 
 		// scale the velocity
-		float newspeed = speed - drop;
+		var newspeed = speed - drop;
 		if (newspeed < 0) newspeed = 0;
 		if (newspeed == speed) return input;
 
