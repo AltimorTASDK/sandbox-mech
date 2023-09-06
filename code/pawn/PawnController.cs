@@ -8,6 +8,7 @@ public partial class PawnController : EntityComponent<Pawn>
 {
 	public const float StepSize = 24f;
 	public const float GroundAngle = 89f;
+	public const float StepGroundAngle = 45f;
 	public const float Gravity = 800f;
 	public const float FrictionMult = 4f;
 
@@ -83,7 +84,7 @@ public partial class PawnController : EntityComponent<Pawn>
 		}
 
 		var mh = new MoveHelper(Entity.Position, Entity.Velocity);
-		mh.MaxStandableAngle = GroundAngle;
+		mh.MaxStandableAngle = StepGroundAngle;
 		mh.Trace = mh.Trace.Size(Entity.Hull).Ignore(Entity);
 
 		if (mh.TryMoveWithStep(Time.Delta, StepSize) > 0)
@@ -164,7 +165,7 @@ public partial class PawnController : EntityComponent<Pawn>
 		float StopSpeed = 100.0f;
 
 		var speed = input.Length;
-		if (speed < 0.1f) return input;
+		if (speed < 0.1f) return Vector3.Zero;
 
 		// Bleed off some speed, but if we have less than the bleed
 		// threshold, bleed the threshold amount.
