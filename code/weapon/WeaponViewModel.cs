@@ -6,7 +6,7 @@ public partial class WeaponViewModel : BaseViewModel
 {
 	protected Weapon Weapon { get; init; }
 
-	public WeaponViewModel( Weapon weapon )
+	public WeaponViewModel(Weapon weapon)
 	{
 		Weapon = weapon;
 		EnableShadowCasting = false;
@@ -17,6 +17,6 @@ public partial class WeaponViewModel : BaseViewModel
 	{
 		base.PlaceViewmodel();
 
-		Camera.Main.SetViewModelCamera( 80f, 1, 500 );
+		Camera.Main.SetViewModelCamera(80f, 1, 500);
 	}
 }

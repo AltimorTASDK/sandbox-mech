@@ -12,21 +12,21 @@ public partial class Pistol : Weapon
 	{
 		Game.AssertClient();
 
-		Particles.Create( "particles/pistol_muzzleflash.vpcf", EffectEntity, "muzzle" );
+		Particles.Create("particles/pistol_muzzleflash.vpcf", EffectEntity, "muzzle");
 
-		Pawn.SetAnimParameter( "b_attack", true );
-		ViewModelEntity?.SetAnimParameter( "fire", true );
+		Pawn.SetAnimParameter("b_attack", true);
+		ViewModelEntity?.SetAnimParameter("fire", true);
 	}
 
 	public override void PrimaryAttack()
 	{
 		ShootEffects();
-		Pawn.PlaySound( "rust_pistol.shoot" );
-		ShootBullet( 0.1f, 100, 20, 1 );
+		Pawn.PlaySound("rust_pistol.shoot");
+		ShootBullet(0.1f, 100, 20, 1);
 	}
 
 	protected override void Animate()
 	{
-		Pawn.SetAnimParameter( "holdtype", (int)CitizenAnimationHelper.HoldTypes.Pistol );
+		Pawn.SetAnimParameter("holdtype", (int)CitizenAnimationHelper.HoldTypes.Pistol);
 	}
 }
