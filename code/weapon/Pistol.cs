@@ -1,4 +1,5 @@
 using Sandbox;
+using Conna.Projectiles;
 
 namespace MyGame;
 
@@ -6,6 +7,7 @@ public partial class Pistol : Weapon
 {
 	public override string ModelPath => "weapons/rust_pistol/rust_pistol.vmdl";
 	public override string ViewModelPath => "weapons/rust_pistol/v_rust_pistol.vmdl";
+	public override float PrimaryRate => 9.5f;
 
 	[ClientRpc]
 	protected virtual void ShootEffects()
@@ -22,7 +24,20 @@ public partial class Pistol : Weapon
 	{
 		ShootEffects();
 		Pawn.PlaySound("rust_pistol.shoot");
-		ShootBullet(0.1f, 100, 20, 1);
+
+		var projectile = Projectile.Create<Projectile>("data/rifle/bullet.proj");
+		projectile.IgnoreEntity = this;
+		projectile.Simulator = Pawn.Projectiles;
+		projectile.Attacker = Pawn;
+
+		var forward = Pawn.EyeRotation.Forward;
+		var right = Pawn.EyeRotation.Right;
+		var up = Pawn.EyeRotation.Up;
+
+		var position = Pawn.EyePosition + right * 12f + forward * 12f + up * -3f;
+		var velocity = forward * projectile.Data.Speed.GetValue();
+
+		projectile.Initialize(position, velocity);
 	}
 
 	protected override void Animate()

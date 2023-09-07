@@ -1,5 +1,6 @@
 ﻿using Sandbox;
 using System.ComponentModel;
+using Conna.Projectiles;
 
 namespace MyGame;
 
@@ -58,7 +59,14 @@ public partial class Pawn : AnimatedEntity
 	[BindComponent] public PawnController Controller { get; }
 	[BindComponent] public PawnAnimator Animator { get; }
 
+	public ProjectileSimulator Projectiles { get; private set; }
+
 	public override Ray AimRay => new Ray(EyePosition, EyeRotation.Forward);
+
+	public Pawn() : base()
+	{
+		Projectiles = new(this);
+	}
 
 	/// <summary>
 	/// Called when the entity is first created
@@ -101,6 +109,7 @@ public partial class Pawn : AnimatedEntity
 		Controller?.Simulate(cl);
 		Animator?.Simulate();
 		ActiveWeapon?.Simulate(cl);
+		Projectiles?.Simulate();
 		EyeLocalPosition = Vector3.Forward * (16f * Scale) + Vector3.Up * (150f * Scale);
 	}
 
