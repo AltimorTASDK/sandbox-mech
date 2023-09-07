@@ -6,7 +6,7 @@ namespace MyGame;
 
 public partial class PawnController : EntityComponent<Pawn>
 {
-	public const float StepSize = 24f;
+	public const float StepSize = 50f;
 	public const float GroundAngle = 89f;
 	public const float StepGroundAngle = 45f;
 	public const float Gravity = 800f;
@@ -56,7 +56,7 @@ public partial class PawnController : EntityComponent<Pawn>
 		var movement = Entity.InputDirection.Normal;
 		var angles = Entity.ViewAngles.WithPitch(0);
 		var moveVectorNormalized = Rotation.From(angles) * movement;
-		var moveVector = moveVectorNormalized * 400f;
+		var moveVector = moveVectorNormalized * MaxSpeed;
 		var wasGrounded = Grounded;
 		Entity.GroundEntity = CheckForGround();
 
@@ -74,8 +74,8 @@ public partial class PawnController : EntityComponent<Pawn>
 		RechargeEnergy();
 		FinalizeEnergy();
 
-		Entity.GroundEntity = CheckForGround();
 		Entity.Velocity += Vector3.Down * Gravity * Time.Delta;
+		Entity.GroundEntity = CheckForGround();
 
 		if (Grounded)
 		{
