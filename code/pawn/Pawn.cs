@@ -50,8 +50,8 @@ public partial class Pawn : AnimatedEntity
 	{
 		get => new
 		(
-			new Vector3(-16, -16, 0),
-			new Vector3(16, 16, 64)
+			new Vector3(-48, -48, 0),
+			new Vector3(48, 48, 160)
 		);
 	}
 
@@ -65,7 +65,8 @@ public partial class Pawn : AnimatedEntity
 	/// </summary>
 	public override void Spawn()
 	{
-		SetModel("models/citizen/citizen.vmdl");
+		//SetModel("models/citizen/citizen.vmdl");
+		SetModel("models/mech.vmdl");
 
 		EnableDrawing = true;
 		EnableHideInFirstPerson = true;
@@ -100,7 +101,7 @@ public partial class Pawn : AnimatedEntity
 		Controller?.Simulate(cl);
 		Animator?.Simulate();
 		ActiveWeapon?.Simulate(cl);
-		EyeLocalPosition = Vector3.Up * (64f * Scale);
+		EyeLocalPosition = Vector3.Forward * (16f * Scale) + Vector3.Up * (150f * Scale);
 	}
 
 	public override void BuildInput()
