@@ -5,7 +5,7 @@
   "Gravity": "0.00,50.00,0",
   "Speed": "8000.00,2000.00,0",
   "Radius": 8,
-  "ModelName": null,
+  "ModelName": "models/empty.vmdl",
   "ExplosionEffect": "particles/rifle/bullet_impact.vpcf",
   "FollowEffect": null,
   "TrailEffect": "particles/rifle/bullet_trail.vpcf",
