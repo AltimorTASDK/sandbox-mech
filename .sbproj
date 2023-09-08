@@ -30,6 +30,29 @@
     "HttpAllowList": null,
     "SavedGames": true,
     "MapDependentSaves": false,
-    "SaveFormatVersion": 1001
+    "SaveFormatVersion": 1001,
+    "TickRate": 128,
+    "LaunchConfigs": [
+      {
+        "Name": "Player Controller Test Course",
+        "GameIdent": "local.mech#local",
+        "MapName": "hadyn.player_controller_test_course_v1",
+        "MaxPlayers": 1,
+        "GameSettings": {},
+        "Addons": "",
+        "PreLaunchCommand": "",
+        "PostLaunchCommand": ""
+      },
+      {
+        "Name": "Test Map",
+        "GameIdent": "local.mech#local",
+        "MapName": "test.vmap",
+        "MaxPlayers": 1,
+        "GameSettings": {},
+        "Addons": "",
+        "PreLaunchCommand": "",
+        "PostLaunchCommand": ""
+      }
+    ]
   }
 }
