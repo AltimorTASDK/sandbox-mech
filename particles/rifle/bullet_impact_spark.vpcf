@@ -537,17 +537,13 @@
 	m_Renderers = 
 	[
 		{
-			_class = "C_OP_RenderSprites"
-			m_bDisableOperator = true
-		},
-		{
 			_class = "C_OP_RenderRopes"
 			m_flRadiusScale = 
 			{
 				m_nType = "PF_TYPE_LITERAL"
 				m_nMapType = "PF_MAP_TYPE_DIRECT"
 				m_NamedValue = ""
-				m_flLiteralValue = 0.15
+				m_flLiteralValue = 0.25
 				m_nControlPoint = 0
 				m_nScalarAttribute = 3
 				m_nVectorAttribute = 6
@@ -799,7 +795,7 @@
 				m_nType = "PF_TYPE_LITERAL"
 				m_nMapType = "PF_MAP_TYPE_DIRECT"
 				m_NamedValue = ""
-				m_flLiteralValue = 2.0
+				m_flLiteralValue = 2.5
 				m_nControlPoint = 0
 				m_nScalarAttribute = 3
 				m_nVectorAttribute = 6
