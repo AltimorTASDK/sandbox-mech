@@ -1,21 +1,72 @@
 Hud
 {
-    .header
-    {
+    .header {
         left: 128px;
         top: 128px;
         flex-direction: column;
 
-        label
-        {
-            font-family: Roboto;
+        label {
+            font-family: Cascadia Mono;
             color: white;
             font-size: 32px;
+            text-stroke: 5px #00000080;
 
-            &.subtitle
-            {
+            &.subtitle {
                 font-size: 16px;
             }
         }
+    }
+
+    .center-panel {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, 256px);
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .bar-background {
+        width: 384px;
+        height: 48px;
+        background-color: #000000C0;
+        box-shadow: 0 0 15px #000;
+        padding: 1px;
+    }
+
+    .bar-number {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+
+        font-family: Roboto;
+        color: white;
+        font-size: 32px;
+        text-shadow: 0 0 2px #000;
+    }
+
+    .health-bar {
+        height: 100%;
+        background-color: #40FF40FF;
+        box-shadow: 0 0 15px #40FF40FF;
+    }
+
+    .energy-bar {
+        height: 100%;
+        background-color: #40C0FFFF;
+        box-shadow: 0 0 15px #40C0FFFF;
+    }
+
+    .crosshair {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background-color: #0F0;
+        border: 1px solid #000;
     }
 }

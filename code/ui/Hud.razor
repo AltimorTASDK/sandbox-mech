@@ -11,23 +11,56 @@
     <VoiceList/>
 
     <div class="header">
-        <label @ref=EnergyLabel></label>
         <label @ref=Speed2DLabel></label>
         <label @ref=Speed3DLabel></label>
+        <label @ref=PositionLabel></label>
+        <label @ref=VelocityLabel></label>
     </div>
+    <div class="center-panel">
+        <div class="bar-background">
+            <div class="health-bar" @ref=HealthBar></div>
+            <label class="bar-number" @ref=HealthNumber></label>
+        </div>
+        <div class="bar-background">
+            <div class="energy-bar" @ref=EnergyBar></div>
+            <label class="bar-number" @ref=EnergyNumber></label>
+        </div>
+    </div>
+    <div class="crosshair"></div>
 </root>
 
 @code
 {
-    public Label EnergyLabel { get; set; }
+    public Panel HealthBar { get; set; }
+    public Label HealthNumber { get; set; }
+
+    public Panel EnergyBar { get; set; }
+    public Label EnergyNumber { get; set; }
+
     public Label Speed2DLabel { get; set; }
     public Label Speed3DLabel { get; set; }
+    public Label PositionLabel { get; set; }
+    public Label VelocityLabel { get; set; }
 
     public override void Tick()
     {
-        var Pawn = (Pawn)Game.LocalPawn;
-        EnergyLabel.Text = $"Energy: {MathF.Truncate(Pawn.Controller.Energy)}";
-        Speed2DLabel.Text = $"Speed 2D: {MathF.Round(Pawn.Velocity.WithZ(0).Length)}";
-        Speed3DLabel.Text = $"Speed 3D: {MathF.Round(Pawn.Velocity.Length)}";
+        if (Game.LocalPawn is Pawn pawn && pawn.Controller is var controller)
+        {
+            HealthBar.Style.Width = Length.Percent(pawn.Health);
+            HealthNumber.Text = $"{MathF.Truncate(pawn.Health)}";
+
+            EnergyBar.Style.Width = Length.Percent(100f * controller.Energy / controller.MaxEnergy);
+            EnergyNumber.Text = $"{MathF.Truncate(controller.Energy)}";
+
+            Speed2DLabel.Text  = $"Speed 2D: {MathF.Round(pawn.Velocity.WithZ(0).Length)}";
+            Speed3DLabel.Text  = $"Speed 3D: {MathF.Round(pawn.Velocity.Length)}";
+            PositionLabel.Text = $"Position: ({FormatVector(pawn.Position)})";
+            VelocityLabel.Text = $"Velocity: ({FormatVector(pawn.Velocity)})";
+        }
+    }
+
+    private static string FormatVector(Vector3 v)
+    {
+        return $"{v.x,8:F2}, {v.y,8:F2}, {v.z,8:F2}";
     }
 }
