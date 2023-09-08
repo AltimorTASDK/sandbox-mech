@@ -40,4 +40,7 @@ public class ProjectileData : GameResource
 
 	[Property, ResourceType("sound")]
 	public string HitSound { get; set; }
+
+	[Property]
+	public DecalDefinition HitDecal { get; set; }
 }
