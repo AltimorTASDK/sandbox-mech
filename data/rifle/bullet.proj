@@ -10,5 +10,6 @@
   "FollowEffect": null,
   "TrailEffect": "particles/rifle/bullet_trail.vpcf",
   "LaunchSound": null,
-  "HitSound": "sounds/impacts/impact-bullet-concrete.sound"
+  "HitSound": "sounds/impacts/impact-bullet-concrete.sound",
+  "HitDecal": "decals/bullethole.decal"
 }
