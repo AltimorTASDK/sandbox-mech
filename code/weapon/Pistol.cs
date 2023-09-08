@@ -34,7 +34,7 @@ public partial class Pistol : Weapon
 		var right = Pawn.EyeRotation.Right;
 		var up = Pawn.EyeRotation.Up;
 
-		var position = Pawn.EyePosition + right * 12f + forward * 12f + up * -3f;
+		var position = Pawn.EyePosition + right * 17f + forward * 24f + up * -4.5f;
 		var velocity = forward * projectile.Data.Speed.GetValue();
 
 		projectile.Initialize(position, velocity);
