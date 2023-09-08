@@ -1,5 +1,6 @@
 {
   "FaceDirection": true,
+  "ExplodeOnDestroy": false,
   "LifeTime": "5.00,5.00,0",
   "Gravity": "0.00,50.00,0",
   "Speed": "8000.00,2000.00,0",
