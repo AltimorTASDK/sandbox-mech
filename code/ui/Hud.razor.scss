@@ -43,19 +43,19 @@ Hud
         font-family: Roboto;
         color: white;
         font-size: 32px;
-        text-shadow: 0 0 2px #000;
+        text-shadow: 0 0 3px #000;
     }
 
     .health-bar {
         height: 100%;
         background-color: #40FF40FF;
-        box-shadow: 0 0 15px #40FF40FF;
+        box-shadow: 0 0 15px #40FF40C0;
     }
 
     .energy-bar {
         height: 100%;
         background-color: #40C0FFFF;
-        box-shadow: 0 0 15px #40C0FFFF;
+        box-shadow: 0 0 15px #40C0FFC0;
     }
 
     .crosshair {
