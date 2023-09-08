@@ -17,7 +17,6 @@ public partial class PawnController : EntityComponent<Pawn>
 	public const float StopSpeed = 100.0f;
 	public const float SlipSpeed = 500.0f;
 
-	public const float MaxEnergy = 30f;
 	public const float JetEnergyCutoff = 5f;
 	public const float JetEnergyDrain = 17f;
 	public const float JetEnergyCharge = 15f;
@@ -31,23 +30,31 @@ public partial class PawnController : EntityComponent<Pawn>
 	/// </summary>
 	public const float MaxGroundVelocityDot = 100f;
 
-	HashSet<string> ControllerEvents = new(StringComparer.OrdinalIgnoreCase);
+	public float MaxEnergy => 30f;
 
-	bool Grounded => Entity.GroundEntity.IsValid();
+	public bool Grounded => Entity.GroundEntity.IsValid();
 
-	bool IsJetting => !JetDepleted && Input.Down("jump");
-
-	[Net, Predicted]
-	public float Energy { get; protected set; } = MaxEnergy;
+	public bool IsJetting => !JetDepleted && Input.Down("jump");
 
 	[Net, Predicted]
-	bool JetDepleted { get; set; }
+	public float Energy { get; protected set; }
+
+	[Net, Predicted]
+	protected bool JetDepleted { get; set; }
 
 	[Predicted]
-	float TimeSinceLastJet { get; set; }
+	protected float TimeSinceLastJet { get; set; }
 
-	TraceResult GroundTrace;
+	protected TraceResult GroundTrace;
 
+	private HashSet<string> ControllerEvents = new(StringComparer.OrdinalIgnoreCase);
+
+	public bool HasEvent(string eventName) => ControllerEvents.Contains(eventName);
+
+	public PawnController()
+	{
+		Energy = MaxEnergy;
+	}
 
 	public void Simulate(IClient cl)
 	{
@@ -55,8 +62,7 @@ public partial class PawnController : EntityComponent<Pawn>
 
 		var movement = Entity.InputDirection.Normal;
 		var angles = Entity.ViewAngles.WithPitch(0);
-		var moveVectorNormalized = Rotation.From(angles) * movement;
-		var moveVector = moveVectorNormalized * MaxSpeed;
+		var moveVector = Rotation.From(angles) * movement;
 		var wasGrounded = Grounded;
 		Entity.GroundEntity = CheckForGround();
 
@@ -67,7 +73,7 @@ public partial class PawnController : EntityComponent<Pawn>
 
 		if (IsJetting)
 		{
-			Entity.Velocity = DoJet(Entity.Velocity, moveVectorNormalized);
+			Entity.Velocity = DoJet(Entity.Velocity, moveVector);
 			TimeSinceLastJet = 0f;
 		}
 
@@ -81,11 +87,11 @@ public partial class PawnController : EntityComponent<Pawn>
 		{
 			Entity.Velocity -= GroundTrace.Normal * Entity.Velocity.Dot(GroundTrace.Normal);
 			Entity.Velocity = ApplyFriction(Entity.Velocity, FrictionMult, Time.Delta);
-			Entity.Velocity = Accelerate(Entity.Velocity, moveVector.Normal, moveVector.Length, MaxSpeed, Acceleration);
+			Entity.Velocity = Accelerate(Entity.Velocity, moveVector, MaxSpeed, Acceleration);
 		}
 		else
 		{
-			Entity.Velocity = Accelerate(Entity.Velocity, moveVector.Normal, moveVector.Length, MaxSpeed, AirAcceleration);
+			Entity.Velocity = Accelerate(Entity.Velocity, moveVector, MaxSpeed, AirAcceleration);
 		}
 
 		var mh = new MoveHelper(Entity.Position, Entity.Velocity);
@@ -102,7 +108,7 @@ public partial class PawnController : EntityComponent<Pawn>
 		}
 	}
 
-	void RechargeEnergy()
+	protected void RechargeEnergy()
 	{
 		if (TimeSinceLastJet < JetEnergyChargeDelay)
 			return;
@@ -113,7 +119,7 @@ public partial class PawnController : EntityComponent<Pawn>
 			JetDepleted = false;
 	}
 
-	void FinalizeEnergy()
+	protected void FinalizeEnergy()
 	{
 		if (Energy <= 0f)
 		{
@@ -124,7 +130,7 @@ public partial class PawnController : EntityComponent<Pawn>
 		Energy = MathF.Min(Energy, MaxEnergy);
 	}
 
-	Vector3 DoJet(Vector3 input, Vector3 moveVector)
+	protected Vector3 DoJet(Vector3 input, Vector3 moveVector)
 	{
 		Energy -= JetEnergyDrain * Time.Delta;
 
@@ -144,7 +150,7 @@ public partial class PawnController : EntityComponent<Pawn>
 		return input + jetDirection * JetAcceleration * Time.Delta;
 	}
 
-	Entity CheckForGround()
+	protected Entity CheckForGround()
 	{
 		GroundTrace = Entity.TraceBBox(Entity.Position, Entity.Position + Vector3.Down, 2f);
 
@@ -165,7 +171,7 @@ public partial class PawnController : EntityComponent<Pawn>
 		return GroundTrace.Entity;
 	}
 
-	Vector3 ApplyFriction(Vector3 input, float frictionAmount, float deltaTime)
+	protected Vector3 ApplyFriction(Vector3 input, float frictionAmount, float deltaTime)
 	{
 		var speed = input.Length;
 		if (speed < 0.1f) return Vector3.Zero;
@@ -190,31 +196,25 @@ public partial class PawnController : EntityComponent<Pawn>
 		return input;
 	}
 
-	Vector3 Accelerate(Vector3 input, Vector3 wishdir, float wishspeed, float speedLimit, float acceleration)
+	protected Vector3 Accelerate(Vector3 input, Vector3 moveVector, float maxSpeed, float acceleration)
 	{
-		if (speedLimit > 0 && wishspeed > speedLimit)
-			wishspeed = speedLimit;
+		var wishspeed = moveVector.Length * maxSpeed;
+		if (wishspeed <= 0)
+			return input;
 
-		var currentspeed = input.Dot(wishdir);
-		var addspeed = wishspeed - currentspeed;
-
+		var addspeed = wishspeed - input.Dot(moveVector.Normal);
 		if (addspeed <= 0)
 			return input;
 
-		var accelspeed = acceleration * Time.Delta * wishspeed;
+		var accelspeed = acceleration * wishspeed * Time.Delta;
 
 		if (Grounded)
 			accelspeed *= GroundTrace.Normal.z;
 
-		if (accelspeed > addspeed)
-			accelspeed = addspeed;
-
-		input += wishdir * accelspeed;
-
-		return input;
+		return input + moveVector.Normal * MathF.Min(accelspeed, addspeed);
 	}
 
-	Vector3 StayOnGround(Vector3 position)
+	protected Vector3 StayOnGround(Vector3 position)
 	{
 		var start = position + Vector3.Up * 2;
 		var end = position + Vector3.Down * StepSize;
@@ -234,16 +234,9 @@ public partial class PawnController : EntityComponent<Pawn>
 		return trace.EndPosition;
 	}
 
-	public bool HasEvent(string eventName)
+	protected void AddEvent(string eventName)
 	{
-		return ControllerEvents.Contains(eventName);
-	}
-
-	void AddEvent(string eventName)
-	{
-		if (HasEvent(eventName))
-			return;
-
-		ControllerEvents.Add(eventName);
+		if (!HasEvent(eventName))
+			ControllerEvents.Add(eventName);
 	}
 }
