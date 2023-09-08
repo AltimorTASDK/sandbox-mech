@@ -55,6 +55,14 @@ public partial class Projectile : ModelEntity
 		Callback = callback;
 		Position = start;
 
+		if (IsClientOnly)
+		{
+			using (Prediction.Off())
+			{
+				CreateEffects();
+			}
+		}
+
 		if (Simulator.IsValid())
 		{
 			Simulator?.Add(this);
@@ -78,14 +86,6 @@ public partial class Projectile : ModelEntity
 				}
 			}
 		}
-
-		if (IsClientOnly)
-		{
-			using (Prediction.Off())
-			{
-				CreateEffects();
-			}
-		}
 	}
 
 	public override void Spawn()
@@ -93,17 +93,6 @@ public partial class Projectile : ModelEntity
 		Predictable = true;
 
 		base.Spawn();
-	}
-
-	public override void ClientSpawn()
-	{
-		// We only want to create effects if we're NOT the server-side copy.
-		if (!IsServerSideCopy())
-		{
-			CreateEffects();
-		}
-
-		base.ClientSpawn();
 	}
 
 	public virtual void CreateEffects()
@@ -183,6 +172,7 @@ public partial class Projectile : ModelEntity
 		if (trace.Hit)
 		{
 			PlayHitEffects(trace.Normal);
+			CreateDecal(trace);
 			Callback?.Invoke(this, trace);
 			Delete();
 		}
@@ -210,23 +200,37 @@ public partial class Projectile : ModelEntity
 			if (explosion != null)
 			{
 				explosion.SetPosition(0, Position);
-				explosion.SetForward(0, normal);
+				explosion.SetPosition(1, normal);
+				explosion.SetForward(2, normal);
+				explosion.SetPosition(3, StartPosition);
+				explosion.SetPosition(4, Position + normal);
 			}
 		}
 
 		if (!string.IsNullOrEmpty(Data.HitSound))
-		{
 			Sound.FromWorld(Data.HitSound, Position);
-		}
+	}
+
+	protected virtual void CreateDecal(TraceResult trace)
+	{
+		if (Data.HitDecal != null)
+			Decal.Place(Data.HitDecal, trace);
+	}
+
+	[GameEvent.PreRender]
+	protected virtual void PreRender()
+	{
+		Trail?.SetPosition(1, Velocity);
+		Trail?.SetForward(2, Velocity);
+		Trail?.SetPosition(3, StartPosition);
+		Trail?.SetPosition(4, Position + Velocity.Normal);
 	}
 
 	[GameEvent.Tick.Server]
 	protected virtual void ServerTick()
 	{
 		if (!Simulator.IsValid())
-		{
 			Simulate();
-		}
 	}
 
 	protected override void OnDestroy()
@@ -241,7 +245,6 @@ public partial class Projectile : ModelEntity
 		ModelEntity?.Delete();
 		LaunchSound.Stop();
 		Follower?.Destroy();
-		Trail?.Destroy();
-		Trail = null;
+		Trail?.Destroy(true);
 	}
 }
