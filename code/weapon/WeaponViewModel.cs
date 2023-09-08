@@ -9,14 +9,14 @@ public partial class WeaponViewModel : BaseViewModel
 	public WeaponViewModel(Weapon weapon)
 	{
 		Weapon = weapon;
-		EnableShadowCasting = false;
-		EnableViewmodelRendering = true;
 	}
 
 	public override void PlaceViewmodel()
 	{
-		base.PlaceViewmodel();
+		if (Game.IsRunningInVR)
+			return;
 
-		Camera.Main.SetViewModelCamera(Camera.Main.FieldOfView, 1, 500);
+		Position = Camera.Position;
+		Rotation = Rotation.LookAt(Camera.Rotation.Forward.WithZ(0f));
 	}
 }
