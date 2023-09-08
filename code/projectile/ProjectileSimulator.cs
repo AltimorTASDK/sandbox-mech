@@ -1,5 +1,6 @@
 ﻿using Sandbox;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Conna.Projectiles;
 
@@ -55,8 +56,8 @@ public partial class ProjectileSimulator : IValid
 
 public static class ProjectileSimulatorExtensions
 {
-	public static bool IsValid(this ProjectileSimulator simulator)
+	public static bool IsValid([NotNullWhen(true)] this ProjectileSimulator? simulator)
 	{
-		return simulator != null && (simulator.Owner?.IsValid() ?? false);
+		return simulator?.Owner.IsValid() ?? false;
 	}
 }
