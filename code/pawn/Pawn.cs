@@ -56,12 +56,17 @@ public partial class Pawn : AnimatedEntity
 		);
 	}
 
-	[BindComponent] public PawnController Controller { get; }
-	[BindComponent] public PawnAnimator Animator { get; }
+	[BindComponent]
+	public PawnController Controller { get; }
+
+	[BindComponent]
+	public PawnAnimator Animator { get; }
 
 	public ProjectileSimulator Projectiles { get; private set; }
 
 	public override Ray AimRay => new Ray(EyePosition, EyeRotation.Forward);
+
+	public float MaxHealth => 100f;
 
 	public Pawn() : base()
 	{
@@ -94,6 +99,7 @@ public partial class Pawn : AnimatedEntity
 		Components.Create<PawnAnimator>();
 
 		SetActiveWeapon(new Pistol());
+		Health = MaxHealth;
 	}
 
 	public void DressFromClient(IClient cl)
