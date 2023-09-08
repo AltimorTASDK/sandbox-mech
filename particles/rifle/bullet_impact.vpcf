@@ -34,5 +34,8 @@
 		{
 			m_ChildRef = resource:"particles/rifle/bullet_impact_spark.vpcf"
 		},
+		{
+			m_ChildRef = resource:"particles/rifle/bullet_impact_trail.vpcf"
+		},
 	]
 }
