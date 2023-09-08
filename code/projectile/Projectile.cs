@@ -12,23 +12,17 @@ public partial class Projectile : ModelEntity
 			.FirstOrDefault(d => d.ResourcePath.ToLower() == dataPath.ToLower());
 
 		if (data == null)
-		{
 			throw new Exception($"Unable to find Projectile Data by path {dataPath}");
-		}
 
-		var projectile = new T();
-		projectile.Data = data;
-		return projectile;
+		return new T { Data = data };
 	}
 
 	[Net, Predicted] public ProjectileData Data { get; set; }
 
 	public Action<Projectile, TraceResult> Callback { get; private set; }
-	public RealTimeUntil CanHitTime { get; set; } = 0.1f;
 	public ProjectileSimulator Simulator { get; set; }
 	public string Attachment { get; set; } = null;
 	public Entity Attacker { get; set; } = null;
-	public bool ExplodeOnDestroy { get; set; } = true;
 	public Entity IgnoreEntity { get; set; }
 	public Vector3 StartPosition { get; private set; }
 	public bool Debug { get; set; } = false;
@@ -118,10 +112,13 @@ public partial class Projectile : ModelEntity
 		{
 			Trail = Particles.Create(Data.TrailEffect, this);
 
-			if (!string.IsNullOrEmpty(Attachment))
-				Trail.SetEntityAttachment(0, this, Attachment);
-			else
-				Trail.SetEntity(0, this);
+			if (Trail != null)
+			{
+				if (!string.IsNullOrEmpty(Attachment))
+					Trail.SetEntityAttachment(0, this, Attachment);
+				else
+					Trail.SetEntity(0, this);
+			}
 		}
 
 		if (!string.IsNullOrEmpty(Data.FollowEffect))
@@ -147,21 +144,32 @@ public partial class Projectile : ModelEntity
 			DebugOverlay.Sphere(Position, Data.Radius, Game.IsClient ? Color.Blue : Color.Red);
 		}
 
-		var newPosition = GetTargetPosition();
+		Velocity += Vector3.Down * Gravity * Time.Delta;
+		var newPosition = Position + Velocity * Time.Delta;
 
 		var trace = Trace.Ray(Position, newPosition)
 			.UseHitboxes()
-			.WithoutTags("trigger")
+			.WithAnyTags("player", "npc")
 			.Size(Data.Radius)
 			.Ignore(this)
 			.Ignore(IgnoreEntity)
 			.Run();
 
+		if (!trace.Hit)
+		{
+			trace = Trace.Ray(Position, newPosition)
+				.UseHitboxes()
+				.WithAnyTags("solid")
+				.Ignore(this)
+				.Ignore(IgnoreEntity)
+				.Run();
+		}
+
 		Position = trace.EndPosition;
 
 		if (LifeTime > 0f && DestroyTime)
 		{
-			if (ExplodeOnDestroy)
+			if (Data.ExplodeOnDestroy)
 			{
 				PlayHitEffects(Vector3.Zero);
 				Callback?.Invoke(this, trace);
@@ -172,7 +180,7 @@ public partial class Projectile : ModelEntity
 			return;
 		}
 
-		if (HasHitTarget(trace))
+		if (trace.Hit)
 		{
 			PlayHitEffects(trace.Normal);
 			Callback?.Invoke(this, trace);
@@ -184,22 +192,6 @@ public partial class Projectile : ModelEntity
 	{
 		return !IsClientOnly && Owner.IsValid() && Owner.IsLocalPawn;
 
-	}
-
-	protected virtual bool HasHitTarget(TraceResult trace)
-	{
-		return (trace.Hit && CanHitTime) || trace.StartedSolid;
-	}
-
-	protected virtual Vector3 GetTargetPosition()
-	{
-		var newPosition = Position;
-		newPosition += Velocity * Time.Delta;
-
-		GravityModifier += Gravity;
-		newPosition -= new Vector3(0f, 0f, GravityModifier * Time.Delta);
-
-		return newPosition;
 	}
 
 	[ClientRpc]
@@ -225,15 +217,6 @@ public partial class Projectile : ModelEntity
 		if (!string.IsNullOrEmpty(Data.HitSound))
 		{
 			Sound.FromWorld(Data.HitSound, Position);
-		}
-	}
-
-	[GameEvent.PreRender]
-	protected virtual void PreRender()
-	{
-		if (ModelEntity.IsValid())
-		{
-			//ModelEntity.Transform = Transform;
 		}
 	}
 

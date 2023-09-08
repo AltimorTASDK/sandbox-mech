@@ -9,6 +9,9 @@ public class ProjectileData : GameResource
 	public bool FaceDirection { get; set; } = true;
 
 	[Property]
+	public bool ExplodeOnDestroy { get; set; } = false;
+
+	[Property]
 	public RangedFloat LifeTime { get; set; } = 5f;
 
 	[Property]
