@@ -57,8 +57,15 @@
 		},
 		{
 			_class = "C_OP_DistanceToCP"
-			m_flInputMax = 400.0
+			m_flInputMax = 256.0
 			m_flOutputMin = 3.0
+			m_flOutputMax = 1.4
+		},
+		{
+			_class = "C_OP_DistanceToCP"
+			m_nFieldOutput = "7"
+			m_flInputMax = 256.0
+			m_flOutputMin = 1.0
 			m_flOutputMax = 0.0
 		},
 		{
