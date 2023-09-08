@@ -6,48 +6,42 @@ namespace Conna.Projectiles;
 
 public partial class ProjectileSimulator : IValid
 {
-	public List<Projectile> List { get; private set; }
+	public HashSet<Projectile> Projectiles { get; private set; }
 	public Entity Owner { get; private set; }
 	public bool IsValid => Owner.IsValid();
 
 	public ProjectileSimulator(Entity owner)
 	{
-		List = new();
+		Projectiles = new();
 		Owner = owner;
 	}
 
 	public void Add(Projectile projectile)
 	{
-		List.Add(projectile);
+		Projectiles.Add(projectile);
 	}
 
 	public void Remove(Projectile projectile)
 	{
-		List.Remove(projectile);
+		Projectiles.Remove(projectile);
 	}
 
 	public void Clear()
 	{
-		foreach (var projectile in List)
+		foreach (var projectile in Projectiles)
 		{
 			projectile.Delete();
 		}
 
-		List.Clear();
+		Projectiles.Clear();
 	}
 
 	public void Simulate()
 	{
-		for (int i = List.Count - 1; i >= 0; i--)
+		Projectiles.RemoveWhere(projectile => !projectile.IsValid());
+
+		foreach (var projectile in Projectiles)
 		{
-			var projectile = List[i];
-
-			if (!projectile.IsValid())
-			{
-				List.RemoveAt(i);
-				continue;
-			}
-
 			if (Prediction.FirstTime)
 				projectile.Simulate();
 		}
