@@ -52,6 +52,16 @@
         "Addons": "",
         "PreLaunchCommand": "",
         "PostLaunchCommand": ""
+      },
+      {
+        "Name": "Construct",
+        "GameIdent": "local.mech#local",
+        "MapName": "facepunch.construct23",
+        "MaxPlayers": 1,
+        "GameSettings": {},
+        "Addons": "",
+        "PreLaunchCommand": "",
+        "PostLaunchCommand": ""
       }
     ]
   }
