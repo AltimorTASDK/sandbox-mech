@@ -89,7 +89,7 @@ public partial class PawnController : EntityComponent<Pawn>
             var traction = GetTraction();
             var adjustedFriction = Friction * traction;
             var adjustedAcceleration = AirAcceleration.LerpTo(Acceleration, traction);
-            var projectedMoveVector = moveVector.ProjectZ(ClippingNormal);
+            var projectedMoveVector = ProjectMoveVector(moveVector);
 
             Entity.Velocity -= Entity.Velocity.ProjectOnNormal(ClippingNormal);
             ApplyFriction(adjustedFriction);
@@ -102,6 +102,11 @@ public partial class PawnController : EntityComponent<Pawn>
 
         Move(Time.Delta);
     }
+
+    /// <summary>
+    /// Adjusts move vector for moving along a slope
+    /// </summary>
+    protected Vector3 ProjectMoveVector(Vector3 moveVector) => moveVector.ProjectZ(ClippingNormal);
 
     protected void AddAcceleration(Vector3 acceleration)
     {

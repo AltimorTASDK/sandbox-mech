@@ -183,6 +183,9 @@ public partial class PawnController : EntityComponent<Pawn>
         var end = start - trace.Normal * (radius + 64f) + normalUp * bias * 2f;
         var ray = Entity.TraceRay(start, end);
 
+        if (!biasToWall && ClippingNormal.Angle(Vector3.Up) > GroundAngle)
+            return trace.Normal;
+
         if (!ray.Hit || ray.Entity != trace.Entity)
             return trace.Normal;
 
