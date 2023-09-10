@@ -1,4 +1,5 @@
 ﻿using Sandbox;
+using System;
 using System.ComponentModel;
 using Conna.Projectiles;
 
@@ -6,227 +7,235 @@ namespace MyGame;
 
 public partial class Pawn : AnimatedEntity
 {
-	[Net, Predicted]
-	public Weapon ActiveWeapon { get; set; }
+    [Net, Predicted]
+    public Weapon ActiveWeapon { get; set; }
 
-	[ClientInput]
-	public Vector3 InputDirection { get; set; }
+    [ClientInput]
+    public Vector3 InputDirection { get; set; }
 
-	[ClientInput]
-	public Angles ViewAngles { get; set; }
+    [ClientInput]
+    public Angles ViewAngles { get; set; }
 
-	/// <summary>
-	/// Position a player should be looking from in world space.
-	/// </summary>
-	[Browsable(false)]
-	public Vector3 EyePosition
-	{
-		get => Transform.PointToWorld(EyeLocalPosition);
-		set => EyeLocalPosition = Transform.PointToLocal(value);
-	}
+    /// <summary>
+    /// Position a player should be looking from in world space.
+    /// </summary>
+    [Browsable(false)]
+    public Vector3 EyePosition
+    {
+        get => Transform.PointToWorld(EyeLocalPosition);
+        set => EyeLocalPosition = Transform.PointToLocal(value);
+    }
 
-	/// <summary>
-	/// Position a player should be looking from in local to the entity coordinates.
-	/// </summary>
-	[Net, Predicted, Browsable(false)]
-	public Vector3 EyeLocalPosition { get; set; }
+    /// <summary>
+    /// Position a player should be looking from in local to the entity coordinates.
+    /// </summary>
+    [Net, Predicted, Browsable(false)]
+    public Vector3 EyeLocalPosition { get; set; }
 
-	/// <summary>
-	/// Rotation of the entity's "eyes", i.e. rotation for the camera when this entity is used as the view entity.
-	/// </summary>
-	[Browsable(false)]
-	public Rotation EyeRotation
-	{
-		get => Transform.RotationToWorld(EyeLocalRotation);
-		set => EyeLocalRotation = Transform.RotationToLocal(value);
-	}
+    /// <summary>
+    /// Rotation of the entity's "eyes", i.e. rotation for the camera when this entity is used as the view entity.
+    /// </summary>
+    [Browsable(false)]
+    public Rotation EyeRotation
+    {
+        get => Transform.RotationToWorld(EyeLocalRotation);
+        set => EyeLocalRotation = Transform.RotationToLocal(value);
+    }
 
-	/// <summary>
-	/// Rotation of the entity's "eyes", i.e. rotation for the camera when this entity is used as the view entity. In local to the entity coordinates.
-	/// </summary>
-	[Net, Predicted, Browsable(false)]
-	public Rotation EyeLocalRotation { get; set; }
+    /// <summary>
+    /// Rotation of the entity's "eyes", i.e. rotation for the camera when this entity is used as the view entity. In local to the entity coordinates.
+    /// </summary>
+    [Net, Predicted, Browsable(false)]
+    public Rotation EyeLocalRotation { get; set; }
 
-	[BindComponent]
-	public PawnController Controller { get; }
+    [BindComponent]
+    public PawnController Controller { get; }
 
-	[BindComponent]
-	public PawnAnimator Animator { get; }
+    [BindComponent]
+    public PawnAnimator Animator { get; }
 
-	public ProjectileSimulator Projectiles { get; private set; }
+    public ProjectileSimulator Projectiles { get; private set; }
 
-	public float MaxHealth => 100f;
+    public float MaxHealth => 100f;
 
-        public float Radius => 48f;
+    public float Radius => 48f;
 
-        public float Height => 160f;
+    public float Height => 160f;
 
-	public string[] TraceTags => new[] { "solid", "playerclip", "passbullets", "player" };
+    public string[] TraceTags => new[] { "solid", "playerclip", "passbullets", "player" };
 
-	public BBox Hull => BBox.FromHeightAndRadius(Height, Radius);
+    public BBox Hull => BBox.FromHeightAndRadius(Height, Radius);
 
-        public Capsule Capsule => Capsule.FromHeightAndRadius(Height, Radius);
+    public Capsule Capsule => Capsule.FromHeightAndRadius(Height, Radius);
 
-	public Trace HullTrace => Trace.Box(Hull, 0, 0).WithAnyTags(TraceTags).Ignore(this);
+    public Trace HullTrace => Trace.Box(Hull, 0, 0).WithAnyTags(TraceTags).Ignore(this);
 
-	public Trace CapsuleTrace => Trace.Capsule(Capsule, 0, 0).WithAnyTags(TraceTags).Ignore(this);
+    public Trace CapsuleTrace => Trace.Capsule(Capsule, 0, 0).WithAnyTags(TraceTags).Ignore(this);
 
-	public override Ray AimRay => new Ray(EyePosition, EyeRotation.Forward);
+    public override Ray AimRay => new Ray(EyePosition, EyeRotation.Forward);
 
-	public Pawn() : base()
-	{
-		Projectiles = new(this);
-	}
+    public Pawn() : base()
+    {
+        Projectiles = new(this);
+    }
 
-	/// <summary>
-	/// Called when the entity is first created
-	/// </summary>
-	public override void Spawn()
-	{
-		//SetModel("models/citizen/citizen.vmdl");
-		SetModel("models/mech.vmdl");
+    /// <summary>
+    /// Called when the entity is first created
+    /// </summary>
+    public override void Spawn()
+    {
+        //SetModel("models/citizen/citizen.vmdl");
+        SetModel("models/mech.vmdl");
 
-		EnableDrawing = true;
-		EnableHideInFirstPerson = true;
-		EnableShadowInFirstPerson = true;
-	}
+        EnableDrawing = true;
+        EnableHideInFirstPerson = true;
+        EnableShadowInFirstPerson = true;
+    }
 
-	public void SetActiveWeapon(Weapon weapon)
-	{
-		ActiveWeapon?.OnHolster();
-		ActiveWeapon = weapon;
-		ActiveWeapon.OnEquip(this);
-	}
+    public void SetActiveWeapon(Weapon weapon)
+    {
+        ActiveWeapon?.OnHolster();
+        ActiveWeapon = weapon;
+        ActiveWeapon.OnEquip(this);
+    }
 
-	public void Respawn()
-	{
-		Components.Create<PawnController>();
-		Components.Create<PawnAnimator>();
+    public void Respawn()
+    {
+        Components.Create<PawnController>();
+        Components.Create<PawnAnimator>();
 
-		SetActiveWeapon(new Pistol());
-		Health = MaxHealth;
-	}
+        SetActiveWeapon(new Pistol());
+        Health = MaxHealth;
+    }
 
-	public void DressFromClient(IClient cl)
-	{
-		var c = new ClothingContainer();
-		c.LoadFromClient(cl);
-		c.DressEntity(this);
-	}
+    public void DressFromClient(IClient cl)
+    {
+        var c = new ClothingContainer();
+        c.LoadFromClient(cl);
+        c.DressEntity(this);
+    }
 
-	public override void Simulate(IClient cl)
-	{
-		SimulateRotation();
-		Controller?.Simulate(cl);
-		Animator?.Simulate();
-		ActiveWeapon?.Simulate(cl);
-		Projectiles?.Simulate();
-		EyeLocalPosition = Vector3.Forward * (16f * Scale) + Vector3.Up * (150f * Scale);
-	}
+    public override void Simulate(IClient cl)
+    {
+        SimulateRotation();
+        Controller?.Simulate(cl);
+        Animator?.Simulate();
+        ActiveWeapon?.Simulate(cl);
+        Projectiles?.Simulate();
+        EyeLocalPosition = Vector3.Forward * (16f * Scale) + Vector3.Up * (150f * Scale);
+    }
 
-	public override void BuildInput()
-	{
-		InputDirection = Input.AnalogMove;
+    public override void BuildInput()
+    {
+        InputDirection = Input.AnalogMove;
 
-		if (Input.StopProcessing)
-			return;
+        if (Input.StopProcessing)
+            return;
 
-		var look = Input.AnalogLook;
+        var look = Input.AnalogLook;
 
-		if (ViewAngles.pitch > 90f || ViewAngles.pitch < -90f)
-		{
-			look = look.WithYaw(look.yaw * -1f);
-		}
+        if (ViewAngles.pitch > 90f || ViewAngles.pitch < -90f)
+        {
+            look = look.WithYaw(look.yaw * -1f);
+        }
 
-		var viewAngles = ViewAngles;
-		viewAngles += look;
-		viewAngles.pitch = viewAngles.pitch.Clamp(-89f, 89f);
-		viewAngles.roll = 0f;
-		ViewAngles = viewAngles.Normal;
-	}
+        var viewAngles = ViewAngles;
+        viewAngles += look;
+        viewAngles.pitch = viewAngles.pitch.Clamp(-89f, 89f);
+        viewAngles.roll = 0f;
+        ViewAngles = viewAngles.Normal;
+    }
 
-	bool IsThirdPerson { get; set; } = false;
+    bool IsThirdPerson { get; set; } = false;
 
-	public override void FrameSimulate(IClient cl)
-	{
-		SimulateRotation();
+    public override void FrameSimulate(IClient cl)
+    {
+        SimulateRotation();
 
-		Camera.Rotation = ViewAngles.ToRotation();
-		Camera.FieldOfView = Screen.CreateVerticalFieldOfView(Game.Preferences.FieldOfView);
+        Camera.Rotation = ViewAngles.ToRotation();
+        Camera.FieldOfView = Screen.CreateVerticalFieldOfView(Game.Preferences.FieldOfView);
 
-		if (Input.Pressed("view"))
-		{
-			IsThirdPerson = !IsThirdPerson;
-		}
+        if (Input.Pressed("view"))
+        {
+            IsThirdPerson = !IsThirdPerson;
+        }
 
-		if (IsThirdPerson)
-		{
-			Vector3 targetPos;
-			var pos = Position + Vector3.Up * 64;
-			var rot = Camera.Rotation * Rotation.FromAxis(Vector3.Up, -16);
+        if (IsThirdPerson)
+        {
+            Vector3 targetPos;
+            var pos = Position + Vector3.Up * 64;
+            var rot = Camera.Rotation * Rotation.FromAxis(Vector3.Up, -16);
 
-			float distance = 80.0f * Scale;
-			targetPos = pos + rot.Right * ((CollisionBounds.Mins.x + 50) * Scale);
-			targetPos += rot.Forward * -distance;
+            float distance = 80.0f * Scale;
+            targetPos = pos + rot.Right * ((CollisionBounds.Mins.x + 50) * Scale);
+            targetPos += rot.Forward * -distance;
 
-			var tr = Trace.Ray(pos, targetPos)
-				.WithAnyTags("solid")
-				.Ignore(this)
-				.Radius(8)
-				.Run();
+            var tr = Trace.Ray(pos, targetPos)
+                .WithAnyTags("solid")
+                .Ignore(this)
+                .Radius(8)
+                .Run();
 
-			Camera.FirstPersonViewer = null;
-			Camera.Position = tr.EndPosition;
-		}
-		else
-		{
-			Camera.FirstPersonViewer = this;
-			Camera.Position = EyePosition;
-		}
-	}
+            Camera.FirstPersonViewer = null;
+            Camera.Position = tr.EndPosition;
+        }
+        else
+        {
+            Camera.FirstPersonViewer = this;
+            Camera.Position = EyePosition;
+        }
+    }
 
-	public TraceResult TraceBBox(Vector3 start, Vector3 end, float liftFeet = 0f)
-	{
-		return TraceBBox(start, end, Hull.Mins, Hull.Maxs, liftFeet);
-	}
+    public TraceResult TraceRay(Vector3 start, Vector3 end)
+    {
+        return Trace.Ray(start, end)
+            .WithAnyTags(TraceTags)
+            .Ignore(this)
+            .Run();
+    }
 
-	public TraceResult TraceBBox(Vector3 start, Vector3 end, Vector3 mins, Vector3 maxs, float liftFeet = 0f)
-	{
-		if (liftFeet > 0)
-		{
-			start += Vector3.Up * liftFeet;
-			maxs = maxs.WithZ(maxs.z - liftFeet);
-		}
+    public TraceResult TraceBBox(Vector3 start, Vector3 end, float liftFeet = 0f)
+    {
+        return TraceBBox(start, end, Hull.Mins, Hull.Maxs, liftFeet);
+    }
 
-		return Trace.Ray(start, end)
-			.Size(mins, maxs)
-			.WithAnyTags(TraceTags)
-			.Ignore(this)
-			.Run();
-	}
+    public TraceResult TraceBBox(Vector3 start, Vector3 end, Vector3 mins, Vector3 maxs, float liftFeet = 0f)
+    {
+        if (liftFeet > 0)
+        {
+            start += Vector3.Up * liftFeet;
+            maxs = maxs.WithZ(maxs.z - liftFeet);
+        }
 
-	public TraceResult TraceCapsule(Vector3 start, Vector3 end, float liftFeet = 0f)
-	{
-		return TraceCapsule(start, end, Capsule, liftFeet);
-	}
+        return Trace.Ray(start, end)
+            .Size(mins, maxs)
+            .WithAnyTags(TraceTags)
+            .Ignore(this)
+            .Run();
+    }
 
-	public TraceResult TraceCapsule(Vector3 start, Vector3 end, Capsule capsule, float liftFeet = 0f)
-	{
-		if (liftFeet > 0)
-		{
-			start += Vector3.Up * liftFeet;
-                        capsule.CenterB += Vector3.Down * liftFeet;
-		}
+    public TraceResult TraceCapsule(Vector3 start, Vector3 end, float liftFeet = 0f)
+    {
+        return TraceCapsule(start, end, Capsule, liftFeet);
+    }
 
-		return Trace.Capsule(capsule, start, end)
-			.WithAnyTags(TraceTags)
-			.Ignore(this)
-			.Run();
-	}
+    public TraceResult TraceCapsule(Vector3 start, Vector3 end, Capsule capsule, float liftFeet = 0f)
+    {
+        if (liftFeet > 0)
+        {
+            start += Vector3.Up * liftFeet;
+            capsule.CenterB += Vector3.Down * liftFeet;
+        }
 
-	protected void SimulateRotation()
-	{
-		EyeRotation = ViewAngles.ToRotation();
-		Rotation = ViewAngles.WithPitch(0f).ToRotation();
-	}
+        return Trace.Capsule(capsule, start, end)
+            .WithAnyTags(TraceTags)
+            .Ignore(this)
+            .Run();
+    }
+
+    protected void SimulateRotation()
+    {
+        EyeRotation = ViewAngles.ToRotation();
+        Rotation = ViewAngles.WithPitch(0f).ToRotation();
+    }
 }

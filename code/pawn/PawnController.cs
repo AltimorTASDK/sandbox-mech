@@ -6,250 +6,226 @@ namespace MyGame;
 
 public partial class PawnController : EntityComponent<Pawn>
 {
-	public const float StepSize = 50f;
-	public const float GroundAngle = 89f;
-	public const float StepGroundAngle = 60f;
-	public const float Gravity = 800f;
-	public const float Friction = 4f;
-	public const float MaxSpeed = 400f;
-	public const float Acceleration = 5f;
-	public const float AirAcceleration = .5f;
-	public const float StopSpeed = 100f;
-	public const float SlipSpeed = 500f;
+    public const float StepSize = 50f;
+    public const float GroundAngle = 89f;
+    public const float StepGroundAngle = 60f;
+    public const float Gravity = 800f;
+    public const float Friction = 4f;
+    public const float MaxSpeed = 400f;
+    public const float Acceleration = 5f;
+    public const float AirAcceleration = .5f;
+    public const float StopSpeed = 100f;
+    public const float SlipSpeed = 500f;
 
-	public const float JetEnergyCutoff = 5f;
-	public const float JetEnergyDrain = 17f;
-	public const float JetEnergyCharge = 15f;
-	public const float JetEnergyChargeDelay = .3f;
-	public const float JetAcceleration = 1200f;
-	public const float JetMaxSideFraction = .8f;
-	public const float JetMaxForwardSpeed = 900f;
+    public const float JetEnergyCutoff = 5f;
+    public const float JetEnergyDrain = 17f;
+    public const float JetEnergyCharge = 15f;
+    public const float JetEnergyChargeDelay = .3f;
+    public const float JetAcceleration = 1200f;
+    public const float JetMaxSideFraction = .8f;
+    public const float JetMaxForwardSpeed = 900f;
 
-	/// <summary>
-	/// The maximum dot product between the velocity and ground normal before the ground is no longer valid.
-	/// </summary>
-	public const float MaxGroundVelocityDot = 100f;
+    /// <summary>
+    /// The maximum dot product between the velocity and ground normal before the ground is no longer valid.
+    /// </summary>
+    public const float MaxGroundVelocityDot = 100f;
 
-	public float MaxEnergy => 30f;
+    public float MaxEnergy => 30f;
 
-	[Net, Predicted]
-	public float Energy { get; protected set; }
+    [Net, Predicted]
+    public float Energy { get; protected set; }
 
-	public bool Grounded => Entity.GroundEntity.IsValid();
+    public bool Grounded => Entity.GroundEntity.IsValid();
 
-	public bool IsJetting => !JetDepleted && Input.Down("jump");
+    public bool IsJetting => !JetDepleted && Input.Down("jump");
 
-	public Vector3 GroundNormal => Grounded ? GroundTrace.Normal : Vector3.Zero;
+    public Vector3 GroundNormal => Grounded ? GroundTrace.Normal : Vector3.Zero;
 
-	[Net, Predicted]
-	protected bool JetDepleted { get; set; }
+    public Vector3 ClippingNormal { get; private set; }
 
-	[Predicted]
-	protected float TimeSinceLastJet { get; set; }
+    [Net, Predicted]
+    protected bool JetDepleted { get; set; }
 
-	private Vector3 CurrentAcceleration;
+    [Predicted]
+    protected float TimeSinceLastJet { get; set; }
 
-	private TraceResult GroundTrace;
+    private Vector3 CurrentAcceleration;
 
-	private HashSet<string> ControllerEvents = new(StringComparer.OrdinalIgnoreCase);
+    private TraceResult GroundTrace;
 
-	public PawnController()
-	{
-		Energy = MaxEnergy;
-	}
+    private HashSet<string> ControllerEvents = new(StringComparer.OrdinalIgnoreCase);
 
-	public void Simulate(IClient cl)
-	{
-		ControllerEvents.Clear();
-                CurrentAcceleration = Vector3.Zero;
+    public PawnController()
+    {
+        Energy = MaxEnergy;
+    }
 
-		var movement = Entity.InputDirection.Normal;
-		var angles = Entity.ViewAngles.WithPitch(0);
-		var moveVector = Rotation.From(angles) * movement;
-		var wasGrounded = Grounded;
+    public void Simulate(IClient cl)
+    {
+        ControllerEvents.Clear();
+        CurrentAcceleration = Vector3.Zero;
+        TimeSinceLastJet += Time.Delta;
 
-		Entity.GroundEntity = CheckForGround();
+        var movement = Entity.InputDirection.Normal;
+        var angles = Entity.ViewAngles.WithPitch(0);
+        var moveVector = Rotation.From(angles) * movement;
+        var wasGrounded = Grounded;
 
-		if (Grounded && !wasGrounded)
-			AddEvent("grounded");
+        UpdateGroundEntity();
 
-		TimeSinceLastJet += Time.Delta;
+        if (Grounded && !wasGrounded)
+            AddEvent("grounded");
 
-		if (IsJetting)
-			DoJet(moveVector);
+        if (IsJetting)
+            DoJet(moveVector);
 
-		UpdateEnergy();
-		AddAcceleration(Vector3.Down * Gravity);
-                CheckToLeaveGround();
+        UpdateEnergy();
+        AddAcceleration(Vector3.Down * Gravity);
+        CheckToLeaveGround();
 
-		if (Grounded)
-		{
-                        var traction = GetTraction();
-                        var adjustedFriction = Friction * traction;
-                        var adjustedAcceleration = AirAcceleration.LerpTo(Acceleration, traction);
-                        var projectedMoveVector = moveVector.ProjectZ(GroundNormal);
-
-			Entity.Velocity -= Entity.Velocity.ProjectOnNormal(GroundNormal);
-			ApplyFriction(adjustedFriction);
-			Accelerate(projectedMoveVector, MaxSpeed, adjustedAcceleration);
-		}
-		else
-		{
-			Accelerate(moveVector, MaxSpeed, AirAcceleration);
-		}
-
-		var mh = new MoveHelper(Entity.Position, Entity.Velocity)
-		{
-                        MaxStandableAngle = StepGroundAngle,
-                        Trace = Entity.CapsuleTrace
-                };
-
-		if (mh.TryMoveWithStep(Time.Delta, StepSize) > 0)
-		{
-			if (Grounded)
-				mh.Position = StayOnGround(mh.Position);
-
-			Entity.Position = mh.Position;
-			Entity.Velocity = mh.Velocity;
-		}
-	}
-
-        protected void AddAcceleration(Vector3 acceleration)
+        if (Grounded)
         {
-                CurrentAcceleration += acceleration;
-                Entity.Velocity += acceleration * Time.Delta;
-        }
+            var traction = GetTraction();
+            var adjustedFriction = Friction * traction;
+            var adjustedAcceleration = AirAcceleration.LerpTo(Acceleration, traction);
+            var projectedMoveVector = moveVector.ProjectZ(GroundNormal);
 
-        /// <summary>
-        /// Gets traction as a multiple of the normal force exerted by gravity on flat ground.
-        /// Only gives a valid result when the pawn is grounded.
-        /// </summary>
-	protected float GetTraction()
-	{
-                return (CurrentAcceleration.Dot(GroundTrace.Normal) / -Gravity).Max(0f);
+            Entity.Velocity -= Entity.Velocity.ProjectOnNormal(GroundNormal);
+            ApplyFriction(adjustedFriction);
+            Accelerate(projectedMoveVector, MaxSpeed, adjustedAcceleration);
         }
-
-        /// <returns>Fraction of requested energy that was successfully consumed</returns>
-        protected float DrainEnergy(float amount)
+        else
         {
-                if (amount >= Energy)
-                {
-                        var fraction = Energy / amount;
-                        Energy = 0f;
-                        JetDepleted = true;
-                        return fraction;
-                }
-
-                Energy -= amount;
-                return 1f;
+            Accelerate(moveVector, MaxSpeed, AirAcceleration);
         }
 
-        protected void AddEnergy(float amount)
+        Move(Time.Delta);
+    }
+
+    protected void AddAcceleration(Vector3 acceleration)
+    {
+        CurrentAcceleration += acceleration;
+        Entity.Velocity += acceleration * Time.Delta;
+    }
+
+    /// <summary>
+    /// Gets traction as a multiple of the normal force exerted by gravity on flat ground.
+    /// Only gives a valid result when the pawn is grounded.
+    /// </summary>
+    protected float GetTraction()
+    {
+        return (CurrentAcceleration.Dot(ClippingNormal) / -Gravity).Max(0f);
+    }
+
+    protected Vector3 GetProjectedMoveVector(Vector3 moveVector)
+    {
+        var projectedMoveVector = moveVector.ProjectZ(GroundNormal);
+    }
+
+    /// <returns>Fraction of requested energy that was successfully consumed</returns>
+    protected float DrainEnergy(float amount)
+    {
+        if (amount >= Energy)
         {
-                Energy = (Energy + amount).Min(MaxEnergy);
-
-		if (Energy >= JetEnergyCutoff)
-			JetDepleted = false;
+            var fraction = Energy / amount;
+            Energy = 0f;
+            JetDepleted = true;
+            return fraction;
         }
 
-	protected void UpdateEnergy()
-	{
-		if (TimeSinceLastJet >= JetEnergyChargeDelay)
-                        AddEnergy(JetEnergyCharge * Time.Delta);
-	}
+        Energy -= amount;
+        return 1f;
+    }
 
-	protected void DoJet(Vector3 moveVector)
-        {
-                // Reduce acceleration if we don't have enough energy for a full tick of jets
-                var energyFraction = DrainEnergy(JetEnergyDrain * Time.Delta);
+    protected void AddEnergy(float amount)
+    {
+        Energy = (Energy + amount).Min(MaxEnergy);
 
-                // Lerp horizontal thrust towards 0 as we approach JetMaxForwardSpeed
-		var forwardSpeed = Entity.Velocity.Dot(moveVector.Normal);
-		var maxSideFraction = moveVector.Length.Min(JetMaxSideFraction);
-                var sideFraction = (1f - (forwardSpeed / JetMaxForwardSpeed)).Clamp(0f, maxSideFraction);
+        if (Energy >= JetEnergyCutoff)
+            JetDepleted = false;
+    }
 
-                // Any remaining thrust is directed upward
-		var upFraction = MathF.Sqrt(1f - sideFraction * sideFraction);
-		var jetDirection = moveVector.Normal * sideFraction + Vector3.Up * upFraction;
+    protected void UpdateEnergy()
+    {
+        if (TimeSinceLastJet >= JetEnergyChargeDelay)
+            AddEnergy(JetEnergyCharge * Time.Delta);
+    }
 
-                AddAcceleration(jetDirection * JetAcceleration * energyFraction);
-                TimeSinceLastJet = 0f;
-        }
+    protected void DoJet(Vector3 moveVector)
+    {
+        // Reduce acceleration if we don't have enough energy for a full tick of jets
+        var energyFraction = DrainEnergy(JetEnergyDrain * Time.Delta);
 
-	protected void ApplyFriction(float friction)
-	{
-		// Scale friction with speed within range
-		var speed = Entity.Velocity.Length;
-		var frictionDelta = speed.Clamp(StopSpeed, SlipSpeed) * friction * Time.Delta;
+        // Lerp horizontal thrust towards 0 as we approach JetMaxForwardSpeed
+        var forwardSpeed = Entity.Velocity.Dot(moveVector.Normal);
+        var maxSideFraction = moveVector.Length.Min(JetMaxSideFraction);
+        var sideFraction = (1f - (forwardSpeed / JetMaxForwardSpeed)).Clamp(0f, maxSideFraction);
 
-                if (frictionDelta < speed)
-                        Entity.Velocity *= (speed - frictionDelta) / speed;
-                else
-                        Entity.Velocity = Vector3.Zero;
-	}
+        // Any remaining thrust is directed upward
+        var upFraction = MathF.Sqrt(1f - sideFraction * sideFraction);
+        var jetDirection = moveVector.Normal * sideFraction + Vector3.Up * upFraction;
 
-	protected void Accelerate(Vector3 moveVector, float maxSpeed, float acceleration)
-	{
-		var wishspeed = moveVector.Length * maxSpeed;
-		if (wishspeed <= 0f)
-			return;
+        AddAcceleration(jetDirection * JetAcceleration * energyFraction);
+        TimeSinceLastJet = 0f;
+    }
 
-		var addspeed = wishspeed - Entity.Velocity.Dot(moveVector.Normal);
-		if (addspeed <= 0f)
-			return;
+    protected void ApplyFriction(float friction)
+    {
+        // Scale friction with speed within range
+        var speed = Entity.Velocity.Length;
+        var frictionDelta = speed.Clamp(StopSpeed, SlipSpeed) * friction * Time.Delta;
 
-		var accelspeed = acceleration * maxSpeed * Time.Delta;
-		Entity.Velocity += moveVector.Normal * accelspeed.Min(addspeed);
-	}
+        if (frictionDelta < speed)
+            Entity.Velocity *= (speed - frictionDelta) / speed;
+        else
+            Entity.Velocity = Vector3.Zero;
+    }
 
-	protected Entity CheckForGround()
-	{
-		GroundTrace = Entity.TraceCapsule(Entity.Position, Entity.Position + Vector3.Down, 2f);
+    protected void Accelerate(Vector3 moveVector, float maxSpeed, float acceleration)
+    {
+        var wishspeed = moveVector.Length * maxSpeed;
+        if (wishspeed <= 0f)
+            return;
 
-		if (!GroundTrace.Hit || !IsValidGroundNormal(GroundTrace.Normal))
-			return null;
+        var addspeed = wishspeed - Entity.Velocity.Dot(moveVector.Normal);
+        if (addspeed <= 0f)
+            return;
 
-		return GroundTrace.Entity;
-	}
+        var accelspeed = acceleration * maxSpeed * Time.Delta;
+        Entity.Velocity += moveVector.Normal * accelspeed.Min(addspeed);
+    }
 
-        /// <summary>
-        /// Check to leave the ground after a velocity update using the cached trace
-        /// </summary>
-        protected void CheckToLeaveGround()
-        {
-                if (Grounded && !IsValidGroundNormal(GroundNormal))
-			Entity.GroundEntity = null;
-        }
+    protected void UpdateGroundEntity()
+    {
+        GroundTrace = Entity.TraceCapsule(Entity.Position, Entity.Position + Vector3.Down, 2f);
 
-        protected bool IsValidGroundNormal(Vector3 normal)
-        {
-		return GroundTrace.Normal.Angle(Vector3.Up) <= GroundAngle &&
-                        Entity.Velocity.Dot(normal) < (IsJetting ? 0 : MaxGroundVelocityDot);
-        }
+        if (!GroundTrace.Hit || !IsValidGroundNormal(GroundTrace.Normal))
+            return;
 
-	protected Vector3 StayOnGround(Vector3 position)
-	{
-		var start = position + Vector3.Up * 2;
-		var end = position + Vector3.Down * StepSize;
+        ClippingNormal = GetClippingNormal(GroundTrace);
+        Entity.GroundEntity = GroundTrace.Entity;
+    }
 
-		// See how far up we can go without getting stuck
-		var trace = Entity.TraceCapsule(position, start);
-		start = trace.EndPosition;
+    /// <summary>
+    /// Check to leave the ground after a velocity update using the cached trace
+    /// </summary>
+    protected void CheckToLeaveGround()
+    {
+        if (Grounded && !IsValidGroundNormal(GroundNormal))
+            Entity.GroundEntity = null;
+    }
 
-		// Now trace down from a known safe position
-		trace = Entity.TraceCapsule(start, end);
+    protected bool IsValidGroundNormal(Vector3 normal)
+    {
+        return GroundTrace.Normal.Angle(Vector3.Up) <= GroundAngle &&
+            Entity.Velocity.Dot(normal) < (IsJetting ? 0 : MaxGroundVelocityDot);
+    }
 
-                if (!trace.Hit || trace.StartedSolid || !IsValidGroundNormal(trace.Normal))
-                        return position;
+    public bool HasEvent(string eventName) => ControllerEvents.Contains(eventName);
 
-		return trace.EndPosition;
-	}
-
-	public bool HasEvent(string eventName) => ControllerEvents.Contains(eventName);
-
-	protected void AddEvent(string eventName)
-	{
-		if (!HasEvent(eventName))
-			ControllerEvents.Add(eventName);
-	}
+    protected void AddEvent(string eventName)
+    {
+        if (!HasEvent(eventName))
+            ControllerEvents.Add(eventName);
+    }
 }
