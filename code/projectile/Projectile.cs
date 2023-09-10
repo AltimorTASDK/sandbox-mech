@@ -44,9 +44,7 @@ public partial class Projectile : ModelEntity
 		Gravity = Data.Gravity.GetValue();
 
 		if (LifeTime > 0f)
-		{
 			DestroyTime = LifeTime;
-		}
 
 		InitialVelocity = velocity;
 		StartPosition = start;
@@ -65,7 +63,7 @@ public partial class Projectile : ModelEntity
 
 		if (Simulator.IsValid())
 		{
-			Simulator?.Add(this);
+			Simulator.Add(this);
 			Owner = Simulator.Owner;
 
 			if (Game.IsServer)
@@ -79,9 +77,7 @@ public partial class Projectile : ModelEntity
 					for (var i = 0; i < tickDifference; i++)
 					{
 						if (IsValid)
-						{
 							Simulate();
-						}
 					}
 				}
 			}
@@ -111,27 +107,19 @@ public partial class Projectile : ModelEntity
 		}
 
 		if (!string.IsNullOrEmpty(Data.FollowEffect))
-		{
 			Follower = Particles.Create(Data.FollowEffect, this);
-		}
 
 		if (!string.IsNullOrEmpty(Data.LaunchSound))
-		{
 			LaunchSound = PlaySound(Data.LaunchSound);
-		}
 	}
 
 	public virtual void Simulate()
 	{
 		if (Data.FaceDirection)
-		{
 			Rotation = Rotation.LookAt(Velocity.Normal);
-		}
 
 		if (Debug)
-		{
 			DebugOverlay.Sphere(Position, Data.Radius, Game.IsClient ? Color.Blue : Color.Red);
-		}
 
 		Velocity += Vector3.Down * Gravity * Time.Delta;
 		var newPosition = Position + Velocity * Time.Delta;
