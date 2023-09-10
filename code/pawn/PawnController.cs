@@ -19,7 +19,7 @@ public partial class PawnController : EntityComponent<Pawn>
     public const float SlipSpeed = 500f;
 
     public const float JetEnergyCutoff = 5f;
-    public const float JetEnergyDrain = 17f;
+    public const float JetEnergyDrain = 16f;
     public const float JetEnergyCharge = 15f;
     public const float JetEnergyChargeDelay = .3f;
     public const float JetAcceleration = 1200f;
