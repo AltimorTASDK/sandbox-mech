@@ -6,6 +6,7 @@
 **/.vs/*
 **/.vscode/*
 *.csproj
+*.sln
 obj/*
 Properties/*
 code/obj/*
