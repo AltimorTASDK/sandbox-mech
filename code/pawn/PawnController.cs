@@ -9,7 +9,7 @@ public partial class PawnController : EntityComponent<Pawn>
 {
     public const float StepSize = 50f;
     public const float GroundAngle = 89f;
-    public const float StepGroundAngle = 60f;
+    public const float StepGroundAngle = 50f;
     public const float Gravity = 800f;
     public const float Friction = 4f;
     public const float MaxSpeed = 400f;

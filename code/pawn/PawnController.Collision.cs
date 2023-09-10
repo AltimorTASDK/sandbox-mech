@@ -100,7 +100,7 @@ public partial class PawnController : EntityComponent<Pawn>
             {
                 var wallNormal = GetClippingNormal(trace, biasToWall: true);
 
-                if (wallNormal.Angle(Vector3.Up) > GroundAngle)
+                if (wallNormal.Angle(Vector3.Up) > StepGroundAngle)
                 {
                     // Stepping consumes a trace
                     iterations++;
@@ -166,6 +166,10 @@ public partial class PawnController : EntityComponent<Pawn>
 	private Vector3 GetClippingNormal(TraceResult trace, bool biasToWall = false)
     {
         if (trace.Normal.Angle(Vector3.Up) > GroundAngle)
+            return trace.Normal;
+
+        // We need some X/Y direction
+        if (MathF.Abs(trace.Normal.z) > .99999f)
             return trace.Normal;
 
         var radius = Entity.Radius;
