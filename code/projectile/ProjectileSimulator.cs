@@ -6,13 +6,12 @@ namespace Conna.Projectiles;
 
 public partial class ProjectileSimulator : IValid
 {
-	public HashSet<Projectile> Projectiles { get; private set; }
 	public Entity Owner { get; private set; }
 	public bool IsValid => Owner.IsValid();
+	private readonly HashSet<Projectile> Projectiles = new();
 
 	public ProjectileSimulator(Entity owner)
 	{
-		Projectiles = new();
 		Owner = owner;
 	}
 
