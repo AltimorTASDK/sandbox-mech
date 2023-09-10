@@ -90,6 +90,7 @@ public partial class Pawn : AnimatedEntity
         EnableDrawing = true;
         EnableHideInFirstPerson = true;
         EnableShadowInFirstPerson = true;
+        CollisionBounds = Hull;
     }
 
     public void SetActiveWeapon(Weapon weapon)
