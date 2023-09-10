@@ -75,41 +75,45 @@ public partial class PawnController : EntityComponent<Pawn>
         }
     }
 
-    private float TryMove(MoveState state, float deltaTime, bool canStep = true)
+    private float TryMove(MoveState state, float deltaTime, bool canStep = true, int maxIterations = 8)
     {
         Vector3? lastNormal = null;
 
-        for (var iterations = 0; iterations < 8; iterations++)
+        for (var iterations = 0; iterations < maxIterations; iterations++)
         {
             if (state.Velocity.IsNearZeroLength || state.FractionRemaining <= 1e-4f)
                 break;
 
             var moveDelta = state.Velocity * deltaTime * state.FractionRemaining;
-            var trace = TraceFromTo(state.Position, state.Position + moveDelta);
+            var trace = TraceMove(state, moveDelta);
 
             state.FractionRemaining *= 1f - trace.Fraction;
 
+            // There's a bug with sweeping where sometimes the end position is starting in solid, so we get stuck.
+            // Push back by a small margin so this should never happen.
             if (trace.Hit)
-            {
-                // There's a bug with sweeping where sometimes the end position is starting in solid, so we get stuck.
-                // Push back by a small margin so this should never happen.
-                state.Position = trace.EndPosition + trace.Normal * 0.03125f;
-            }
+                state.Position += trace.Normal * .03125f;
             else
-            {
-                state.Position = trace.EndPosition;
                 break;
-            }
 
             if (canStep)
             {
                 var wallNormal = GetClippingNormal(trace, biasToWall: true);
-                Log.Info($"wallNormal {wallNormal}");
 
                 if (wallNormal.Angle(Vector3.Up) > GroundAngle)
                 {
-                    if (TryStep(state, deltaTime))
+                    // Stepping consumes a trace
+                    iterations++;
+
+                    if (iterations >= maxIterations)
+                        break;
+
+                    if (TryStep(state, wallNormal, deltaTime))
+                    {
+                        // Another 3 traces on success
+                        iterations += 3;
                         continue;
+                    }
                 }
             }
 
@@ -130,23 +134,34 @@ public partial class PawnController : EntityComponent<Pawn>
         return 1f - state.FractionRemaining;
     }
 
-    private bool TryStep(MoveState outState, float deltaTime)
+    private bool TryStep(MoveState outState, Vector3 wallNormal, float deltaTime)
     {
-        var state = new MoveState(outState);
+        // Test for flat ground with a downward bbox trace slightly nudged into the wall
+        var bboxTraceStart = outState.Position - wallNormal;
+        var bboxTrace = Entity.TraceBBox(bboxTraceStart, bboxTraceStart + Vector3.Down * 2f, StepSize);
 
-        // Go up, over, and back down
-        TraceMove(state, Vector3.Up * StepSize);
-        TryMove(state, deltaTime, canStep: false);
-        var downTrace = TraceMove(state, Vector3.Down * StepSize);
-        var surfaceNormal = GetClippingNormal(downTrace);
-        Log.Info($"surface normal {surfaceNormal}");
-
-        if (!downTrace.Hit || surfaceNormal.Angle(Vector3.Up) > StepGroundAngle)
+        if (!bboxTrace.Hit || bboxTrace.StartedSolid || bboxTrace.Normal.Angle(Vector3.Up) > StepGroundAngle)
             return false;
 
-        Log.Info($"steppin. delta {state.Position - outState.Position}");
+        var state = new MoveState(outState);
+        var bboxStepSize = (bboxTrace.EndPosition - bboxTraceStart).z;
 
+        // Use flat trace to check stairs movement
+        state.Velocity = state.Velocity.WithZ(0f);
+
+        //  Up, down, and over
+        TraceMove(state, Vector3.Up * bboxStepSize);
+        TryMove(state, deltaTime, canStep: false, maxIterations: 1);
+        var downTrace = TraceMove(state, Vector3.Down * bboxStepSize);
+
+        if (!downTrace.Hit)
+            return false;
+
+        //Log.Info($"fraccy {stepDownTrace.Fraction} guyname {stepDownTrace.Entity.Name} normie {stepDownTrace.Normal} end possy {stepDownTrace.EndPosition}");
+
+        state.Velocity = outState.Velocity;
         outState.CopyFrom(state);
+
         return true;
     }
 
@@ -158,22 +173,24 @@ public partial class PawnController : EntityComponent<Pawn>
         var radius = Entity.Radius;
         var height = Entity.Height;
 
+        var normalRight = trace.Normal.Cross(Vector3.Up);
+        var normalUp = normalRight.Cross(trace.Normal);
+
         // Find the center of the end of the capsule that collided
         var start = trace.EndPosition + Vector3.Up * (trace.Normal.z >= 0f ? radius : height + radius);
 
         // Trace outward past radius with a slight centerward bias to break ties on corner collisions
         // Flip to an outward bias if biasToWall is true
-        var bias = (trace.Normal.z < 0) != biasToWall ? -.01f : .01f;
-        var end = start - trace.Normal * (radius + 2f) + Vector3.Up * bias;
-
+        var bias = (trace.Normal.z < 0) != biasToWall ? -1f : 1f;
+        var end = start - trace.Normal * (radius + 64f) + normalUp * bias * 2f;
         var ray = Entity.TraceRay(start, end);
 
-        if (!ray.Hit)
-            return Vector3.Zero;
+        if (!ray.Hit || ray.Entity != trace.Entity)
+            return trace.Normal;
 
         // Retain curved X/Y normals, but don't lose traction on steps
         var xyLength = MathF.Sqrt(1f - ray.Normal.z.Squared());
-        var xyNormal = trace.Normal.WithZ(0f).Normal;
+        var xyNormal = trace.Normal.Normal2D();
         return (xyNormal * xyLength + Vector3.Up * ray.Normal.z).Normal;
     }
 }

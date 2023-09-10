@@ -1,4 +1,5 @@
-﻿using Sandbox;
+﻿using Microsoft.VisualBasic;
+using Sandbox;
 using System;
 using System.Collections.Generic;
 
@@ -88,9 +89,9 @@ public partial class PawnController : EntityComponent<Pawn>
             var traction = GetTraction();
             var adjustedFriction = Friction * traction;
             var adjustedAcceleration = AirAcceleration.LerpTo(Acceleration, traction);
-            var projectedMoveVector = moveVector.ProjectZ(GroundNormal);
+            var projectedMoveVector = moveVector.ProjectZ(ClippingNormal);
 
-            Entity.Velocity -= Entity.Velocity.ProjectOnNormal(GroundNormal);
+            Entity.Velocity -= Entity.Velocity.ProjectOnNormal(ClippingNormal);
             ApplyFriction(adjustedFriction);
             Accelerate(projectedMoveVector, MaxSpeed, adjustedAcceleration);
         }
@@ -115,11 +116,6 @@ public partial class PawnController : EntityComponent<Pawn>
     protected float GetTraction()
     {
         return (CurrentAcceleration.Dot(ClippingNormal) / -Gravity).Max(0f);
-    }
-
-    protected Vector3 GetProjectedMoveVector(Vector3 moveVector)
-    {
-        var projectedMoveVector = moveVector.ProjectZ(GroundNormal);
     }
 
     /// <returns>Fraction of requested energy that was successfully consumed</returns>

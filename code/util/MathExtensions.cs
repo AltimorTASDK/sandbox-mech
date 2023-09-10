@@ -4,6 +4,8 @@ public static class VectorExtensions
 {
     public static float Squared(this float x) => x * x;
 
+    public static Vector3 Normal2D(this Vector3 v) => v.WithZ(0).Normal;
+
     public static float Min(this float a, float b) => a < b ? a : b;
 
     public static float Max(this float a, float b) => a > b ? a : b;
