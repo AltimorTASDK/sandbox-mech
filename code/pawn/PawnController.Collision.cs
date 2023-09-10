@@ -163,7 +163,7 @@ public partial class PawnController : EntityComponent<Pawn>
         return true;
     }
 
-	private Vector3 GetClippingNormal(TraceResult trace, bool biasToWall = false)
+    private Vector3 GetClippingNormal(TraceResult trace, bool biasToWall = false)
     {
         if (trace.Normal.Angle(Vector3.Up) > GroundAngle)
             return trace.Normal;
