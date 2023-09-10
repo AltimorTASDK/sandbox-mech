@@ -26,18 +26,20 @@ public partial class PawnController : EntityComponent<Pawn>
 	public const float JetMaxForwardSpeed = 900f;
 
 	/// <summary>
-	/// The maximum dot product between the velocity and ground normal for ground to be considered valid.
+	/// The maximum dot product between the velocity and ground normal before the ground is no longer valid.
 	/// </summary>
 	public const float MaxGroundVelocityDot = 100f;
 
 	public float MaxEnergy => 30f;
 
+	[Net, Predicted]
+	public float Energy { get; protected set; }
+
 	public bool Grounded => Entity.GroundEntity.IsValid();
 
 	public bool IsJetting => !JetDepleted && Input.Down("jump");
 
-	[Net, Predicted]
-	public float Energy { get; protected set; }
+	public Vector3 GroundNormal => Grounded ? GroundTrace.Normal : Vector3.Zero;
 
 	[Net, Predicted]
 	protected bool JetDepleted { get; set; }
@@ -45,13 +47,11 @@ public partial class PawnController : EntityComponent<Pawn>
 	[Predicted]
 	protected float TimeSinceLastJet { get; set; }
 
-	protected TraceResult GroundTrace;
+	private Vector3 CurrentAcceleration;
 
-	protected Vector3 CurrentAcceleration;
+	private TraceResult GroundTrace;
 
 	private HashSet<string> ControllerEvents = new(StringComparer.OrdinalIgnoreCase);
-
-	public bool HasEvent(string eventName) => ControllerEvents.Contains(eventName);
 
 	public PawnController()
 	{
@@ -67,6 +67,7 @@ public partial class PawnController : EntityComponent<Pawn>
 		var angles = Entity.ViewAngles.WithPitch(0);
 		var moveVector = Rotation.From(angles) * movement;
 		var wasGrounded = Grounded;
+
 		Entity.GroundEntity = CheckForGround();
 
 		if (Grounded && !wasGrounded)
@@ -86,9 +87,9 @@ public partial class PawnController : EntityComponent<Pawn>
                         var traction = GetTraction();
                         var adjustedFriction = Friction * traction;
                         var adjustedAcceleration = AirAcceleration.LerpTo(Acceleration, traction);
-                        var projectedMoveVector = moveVector.ProjectZ(GroundTrace.Normal);
+                        var projectedMoveVector = moveVector.ProjectZ(GroundNormal);
 
-			Entity.Velocity -= Entity.Velocity.ProjectOnNormal(GroundTrace.Normal);
+			Entity.Velocity -= Entity.Velocity.ProjectOnNormal(GroundNormal);
 			ApplyFriction(adjustedFriction);
 			Accelerate(projectedMoveVector, MaxSpeed, adjustedAcceleration);
 		}
@@ -97,9 +98,11 @@ public partial class PawnController : EntityComponent<Pawn>
 			Accelerate(moveVector, MaxSpeed, AirAcceleration);
 		}
 
-		var mh = new MoveHelper(Entity.Position, Entity.Velocity);
-		mh.MaxStandableAngle = StepGroundAngle;
-		mh.Trace = mh.Trace.Size(Entity.Hull).Ignore(Entity);
+		var mh = new MoveHelper(Entity.Position, Entity.Velocity)
+		{
+                        MaxStandableAngle = StepGroundAngle,
+                        Trace = Entity.CapsuleTrace
+                };
 
 		if (mh.TryMoveWithStep(Time.Delta, StepSize) > 0)
 		{
@@ -131,9 +134,10 @@ public partial class PawnController : EntityComponent<Pawn>
         {
                 if (amount >= Energy)
                 {
+                        var fraction = Energy / amount;
                         Energy = 0f;
                         JetDepleted = true;
-                        return Energy / amount;
+                        return fraction;
                 }
 
                 Energy -= amount;
@@ -160,7 +164,7 @@ public partial class PawnController : EntityComponent<Pawn>
                 var energyFraction = DrainEnergy(JetEnergyDrain * Time.Delta);
 
                 // Lerp horizontal thrust towards 0 as we approach JetMaxForwardSpeed
-		var forwardSpeed = Vector3.Dot(Entity.Velocity, moveVector.Normal);
+		var forwardSpeed = Entity.Velocity.Dot(moveVector.Normal);
 		var maxSideFraction = moveVector.Length.Min(JetMaxSideFraction);
                 var sideFraction = (1f - (forwardSpeed / JetMaxForwardSpeed)).Clamp(0f, maxSideFraction);
 
@@ -174,14 +178,12 @@ public partial class PawnController : EntityComponent<Pawn>
 
 	protected void ApplyFriction(float friction)
 	{
+		// Scale friction with speed within range
 		var speed = Entity.Velocity.Length;
+		var frictionDelta = speed.Clamp(StopSpeed, SlipSpeed) * friction * Time.Delta;
 
-		// Scale friction with speed within range.
-		var drop = speed.Clamp(StopSpeed, SlipSpeed) * friction * Time.Delta;
-
-		// scale the velocity
-                if (drop < speed)
-                        Entity.Velocity *= (speed - drop) / speed;
+                if (frictionDelta < speed)
+                        Entity.Velocity *= (speed - frictionDelta) / speed;
                 else
                         Entity.Velocity = Vector3.Zero;
 	}
@@ -202,15 +204,9 @@ public partial class PawnController : EntityComponent<Pawn>
 
 	protected Entity CheckForGround()
 	{
-		GroundTrace = Entity.TraceBBox(Entity.Position, Entity.Position + Vector3.Down, 2f);
+		GroundTrace = Entity.TraceCapsule(Entity.Position, Entity.Position + Vector3.Down, 2f);
 
-		if (!GroundTrace.Hit)
-			return null;
-
-		if (GroundTrace.Normal.Angle(Vector3.Up) > GroundAngle)
-			return null;
-
-                if (!ShouldStayOnGround(GroundTrace.Normal))
+		if (!GroundTrace.Hit || !IsValidGroundNormal(GroundTrace.Normal))
 			return null;
 
 		return GroundTrace.Entity;
@@ -221,14 +217,14 @@ public partial class PawnController : EntityComponent<Pawn>
         /// </summary>
         protected void CheckToLeaveGround()
         {
-                if (Grounded && !ShouldStayOnGround(GroundTrace.Normal))
+                if (Grounded && !IsValidGroundNormal(GroundNormal))
 			Entity.GroundEntity = null;
         }
 
-        protected bool ShouldStayOnGround(Vector3 normal)
+        protected bool IsValidGroundNormal(Vector3 normal)
         {
-		var GroundDot = Vector3.Dot(Entity.Velocity, normal);
-		return GroundDot < 0 || (!IsJetting && GroundDot <= MaxGroundVelocityDot);
+		return GroundTrace.Normal.Angle(Vector3.Up) <= GroundAngle &&
+                        Entity.Velocity.Dot(normal) < (IsJetting ? 0 : MaxGroundVelocityDot);
         }
 
 	protected Vector3 StayOnGround(Vector3 position)
@@ -237,20 +233,19 @@ public partial class PawnController : EntityComponent<Pawn>
 		var end = position + Vector3.Down * StepSize;
 
 		// See how far up we can go without getting stuck
-		var trace = Entity.TraceBBox(position, start);
+		var trace = Entity.TraceCapsule(position, start);
 		start = trace.EndPosition;
 
 		// Now trace down from a known safe position
-		trace = Entity.TraceBBox(start, end);
+		trace = Entity.TraceCapsule(start, end);
 
-		if (trace.Fraction <= 0) return position;
-		if (trace.Fraction >= 1) return position;
-		if (trace.StartedSolid) return position;
-		if (Vector3.GetAngle(Vector3.Up, trace.Normal) > GroundAngle) return position;
-		if (!ShouldStayOnGround(trace.Normal)) return position;
+                if (!trace.Hit || trace.StartedSolid || !IsValidGroundNormal(trace.Normal))
+                        return position;
 
 		return trace.EndPosition;
 	}
+
+	public bool HasEvent(string eventName) => ControllerEvents.Contains(eventName);
 
 	protected void AddEvent(string eventName)
 	{

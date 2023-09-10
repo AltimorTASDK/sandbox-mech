@@ -47,15 +47,6 @@ public partial class Pawn : AnimatedEntity
 	[Net, Predicted, Browsable(false)]
 	public Rotation EyeLocalRotation { get; set; }
 
-	public BBox Hull
-	{
-		get => new
-		(
-			new Vector3(-48, -48, 0),
-			new Vector3(48, 48, 160)
-		);
-	}
-
 	[BindComponent]
 	public PawnController Controller { get; }
 
@@ -64,9 +55,23 @@ public partial class Pawn : AnimatedEntity
 
 	public ProjectileSimulator Projectiles { get; private set; }
 
-	public override Ray AimRay => new Ray(EyePosition, EyeRotation.Forward);
-
 	public float MaxHealth => 100f;
+
+        public float Radius => 48f;
+
+        public float Height => 160f;
+
+	public string[] TraceTags => new[] { "solid", "playerclip", "passbullets", "player" };
+
+	public BBox Hull => BBox.FromHeightAndRadius(Height, Radius);
+
+        public Capsule Capsule => Capsule.FromHeightAndRadius(Height, Radius);
+
+	public Trace HullTrace => Trace.Box(Hull, 0, 0).WithAnyTags(TraceTags).Ignore(this);
+
+	public Trace CapsuleTrace => Trace.Capsule(Capsule, 0, 0).WithAnyTags(TraceTags).Ignore(this);
+
+	public override Ray AimRay => new Ray(EyePosition, EyeRotation.Forward);
 
 	public Pawn() : base()
 	{
@@ -180,12 +185,12 @@ public partial class Pawn : AnimatedEntity
 		}
 	}
 
-	public TraceResult TraceBBox(Vector3 start, Vector3 end, float liftFeet = 0.0f)
+	public TraceResult TraceBBox(Vector3 start, Vector3 end, float liftFeet = 0f)
 	{
 		return TraceBBox(start, end, Hull.Mins, Hull.Maxs, liftFeet);
 	}
 
-	public TraceResult TraceBBox(Vector3 start, Vector3 end, Vector3 mins, Vector3 maxs, float liftFeet = 0.0f)
+	public TraceResult TraceBBox(Vector3 start, Vector3 end, Vector3 mins, Vector3 maxs, float liftFeet = 0f)
 	{
 		if (liftFeet > 0)
 		{
@@ -193,13 +198,30 @@ public partial class Pawn : AnimatedEntity
 			maxs = maxs.WithZ(maxs.z - liftFeet);
 		}
 
-		var tr = Trace.Ray(start, end)
-					.Size(mins, maxs)
-					.WithAnyTags("solid", "playerclip", "passbullets")
-					.Ignore(this)
-					.Run();
+		return Trace.Ray(start, end)
+			.Size(mins, maxs)
+			.WithAnyTags(TraceTags)
+			.Ignore(this)
+			.Run();
+	}
 
-		return tr;
+	public TraceResult TraceCapsule(Vector3 start, Vector3 end, float liftFeet = 0f)
+	{
+		return TraceCapsule(start, end, Capsule, liftFeet);
+	}
+
+	public TraceResult TraceCapsule(Vector3 start, Vector3 end, Capsule capsule, float liftFeet = 0f)
+	{
+		if (liftFeet > 0)
+		{
+			start += Vector3.Up * liftFeet;
+                        capsule.CenterB += Vector3.Down * liftFeet;
+		}
+
+		return Trace.Capsule(capsule, start, end)
+			.WithAnyTags(TraceTags)
+			.Ignore(this)
+			.Run();
 	}
 
 	protected void SimulateRotation()
