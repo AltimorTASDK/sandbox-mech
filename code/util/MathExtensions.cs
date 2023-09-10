@@ -12,7 +12,7 @@ public static class VectorExtensions
         /// </summary>
         public static Vector3 ProjectZ(this Vector3 vector, Vector3 normal, bool rescale = true)
         {
-                if (MathF.Abs(normal.z) <= 1e-8)
+                if (MathF.Abs(normal.z) <= 1e-8f)
                         return Vector3.Zero;
 
                 var projected = vector.WithZ((vector.x * normal.x + vector.y * normal.y) / -normal.z);
