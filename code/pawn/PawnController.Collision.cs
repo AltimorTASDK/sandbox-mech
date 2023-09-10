@@ -137,27 +137,25 @@ public partial class PawnController : EntityComponent<Pawn>
     private bool TryStep(MoveState outState, Vector3 wallNormal, float deltaTime)
     {
         // Test for flat ground with a downward bbox trace slightly nudged into the wall
-        var bboxTraceStart = outState.Position - wallNormal;
+        var bboxTraceStart = outState.Position - wallNormal.Normal2D();
         var bboxTrace = Entity.TraceBBox(bboxTraceStart, bboxTraceStart + Vector3.Down * 2f, StepSize);
 
         if (!bboxTrace.Hit || bboxTrace.StartedSolid || bboxTrace.Normal.Angle(Vector3.Up) > StepGroundAngle)
             return false;
 
         var state = new MoveState(outState);
-        var bboxStepSize = (bboxTrace.EndPosition - bboxTraceStart).z;
+        var bboxStepSize = bboxTrace.EndPosition.z - bboxTraceStart.z + 2f;
 
         // Use flat trace to check stairs movement
-        state.Velocity = state.Velocity.WithZ(0f);
+        state.Velocity.z = 0f;
 
         //  Up, down, and over
         TraceMove(state, Vector3.Up * bboxStepSize);
         TryMove(state, deltaTime, canStep: false, maxIterations: 1);
-        var downTrace = TraceMove(state, Vector3.Down * bboxStepSize);
+        var downTrace = TraceMove(state, Vector3.Down * (bboxStepSize + 2f));
 
-        if (!downTrace.Hit)
+        if (!downTrace.Hit || downTrace.StartedSolid)
             return false;
-
-        //Log.Info($"fraccy {stepDownTrace.Fraction} guyname {stepDownTrace.Entity.Name} normie {stepDownTrace.Normal} end possy {stepDownTrace.EndPosition}");
 
         state.Velocity = outState.Velocity;
         outState.CopyFrom(state);
