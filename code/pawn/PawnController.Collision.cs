@@ -124,8 +124,8 @@ public partial class PawnController : EntityComponent<Pawn>
             else
             {
                 // Don't get pushed back into the previous surface
-                var direction = lastNormal.Value.Cross(trace.Normal);
-                state.Velocity = direction.Normal * direction.Dot(state.Velocity);
+                var direction = lastNormal.Value.Cross(trace.Normal).Normal;
+                state.Velocity = direction * direction.Dot(state.Velocity);
             }
 
             lastNormal = trace.Normal;
