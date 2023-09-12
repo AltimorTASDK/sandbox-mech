@@ -102,16 +102,8 @@ public partial class PawnController : EntityComponent<Pawn>
 
                 if (wallNormal.Angle(Vector3.Up) > StepGroundAngle)
                 {
-                    // Stepping consumes a trace
-                    iterations++;
-
-                    if (iterations >= maxIterations)
-                        break;
-
                     if (TryStep(state, wallNormal, deltaTime))
                     {
-                        // Another 3 traces on success
-                        iterations += 3;
                         continue;
                     }
                 }
