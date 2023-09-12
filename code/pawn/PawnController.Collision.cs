@@ -194,7 +194,7 @@ public partial class PawnController : EntityComponent<Pawn>
             return trace.Normal;
 
         // Retain curved X/Y normals, but don't lose traction on steps
-        var xyLength = MathF.Sqrt(1f - ray.Normal.z.Squared());
+        var xyLength = MathF.Sqrt(1f - ray.Normal.z.Min(1f).Squared());
         var xyNormal = trace.Normal.Normal2D();
         return (xyNormal * xyLength + Vector3.Up * ray.Normal.z).Normal;
     }
