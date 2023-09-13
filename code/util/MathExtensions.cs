@@ -4,11 +4,15 @@ public static class VectorExtensions
 {
     public static float Squared(this float x) => x * x;
 
-    public static Vector3 Normal2D(this Vector3 v) => v.WithZ(0).Normal;
-
     public static float Min(this float a, float b) => a < b ? a : b;
 
     public static float Max(this float a, float b) => a > b ? a : b;
+
+    public static Vector3 Normal2D(this Vector3 v) => v.WithZ(0).Normal;
+
+    public static float Length2D(this Vector3 v) => v.WithZ(0).Length;
+
+    public static float Length2DSquared(this Vector3 v) => v.WithZ(0).LengthSquared;
 
     /// <summary>
     /// Project a vector onto a normal while maintaining its X/Y direction.

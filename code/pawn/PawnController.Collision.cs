@@ -157,18 +157,21 @@ public partial class PawnController : EntityComponent<Pawn>
 
     private Vector3 GetClippingNormal(TraceResult trace, bool biasToWall = false)
     {
+        const float TraceDepth = 64f;
+        const float TraceBias = 2f;
+
         if (trace.Normal.Angle(Vector3.Up) > GroundAngle)
             return trace.Normal;
 
         // We need some X/Y direction
-        if (MathF.Abs(trace.Normal.z) > .99999f)
+        if (trace.Normal.Length2D() < TraceBias / TraceDepth)
             return trace.Normal;
 
         var radius = Entity.Radius;
         var height = Entity.Height;
 
-        var normalRight = trace.Normal.Cross(Vector3.Up);
-        var normalUp = normalRight.Cross(trace.Normal);
+        var normalRight = trace.Normal.Cross(Vector3.Up).Normal;
+        var normalUp = normalRight.Cross(trace.Normal).Normal;
 
         // Find the center of the end of the capsule that collided
         var start = trace.EndPosition + Vector3.Up * (trace.Normal.z >= 0f ? radius : height + radius);
@@ -176,8 +179,13 @@ public partial class PawnController : EntityComponent<Pawn>
         // Trace outward past radius with a slight centerward bias to break ties on corner collisions
         // Flip to an outward bias if biasToWall is true
         var bias = (trace.Normal.z < 0) != biasToWall ? -1f : 1f;
-        var end = start - trace.Normal * (radius + 64f) + normalUp * bias * 2f;
-        var ray = Entity.TraceRay(start, end);
+        var delta = -trace.Normal * (radius + TraceDepth) + normalUp * bias * TraceBias;
+
+        // We won't get a valid result if the bias inverted the yaw
+        if (delta.Dot(trace.Normal.Normal2D()) > 0f)
+            return trace.Normal;
+
+        var ray = Entity.TraceRay(start, start + delta);
 
         if (!biasToWall && trace.Normal.Angle(Vector3.Up) > GroundAngle)
             return trace.Normal;
