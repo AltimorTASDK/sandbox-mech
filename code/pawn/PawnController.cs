@@ -188,7 +188,7 @@ public partial class PawnController : EntityComponent<Pawn>
         if (wishspeed <= 0f)
             return;
 
-        var addspeed = wishspeed - Entity.Velocity.Dot(moveVector.Normal);
+        var addspeed = wishspeed - Entity.Velocity.Dot(moveVector.Normal2D());
         if (addspeed <= 0f)
             return;
 
