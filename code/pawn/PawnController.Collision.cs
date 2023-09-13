@@ -46,23 +46,23 @@ public partial class PawnController : EntityComponent<Pawn>
         return trace;
     }
 
-	protected Vector3 StayOnGround(Vector3 position)
-	{
-		var start = position + Vector3.Up * 2;
-		var end = position + Vector3.Down * StepSize;
+    protected Vector3 StayOnGround(Vector3 position)
+    {
+        var start = position + Vector3.Up * 2;
+        var end = position + Vector3.Down * StepSize;
 
-		// See how far up we can go without getting stuck
-		var trace = Entity.TraceCapsule(position, start);
-		start = trace.EndPosition;
+        // See how far up we can go without getting stuck
+        var trace = Entity.TraceCapsule(position, start);
+        start = trace.EndPosition;
 
-		// Now trace down from a known safe position
-		trace = Entity.TraceCapsule(start, end);
+        // Now trace down from a known safe position
+        trace = Entity.TraceCapsule(start, end);
 
         if (!trace.Hit || trace.StartedSolid || !IsValidGroundNormal(trace.Normal))
             return position;
 
-		return trace.EndPosition;
-	}
+        return trace.EndPosition;
+    }
 
     private void Move(float deltaTime)
     {
