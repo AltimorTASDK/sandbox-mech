@@ -76,6 +76,13 @@ public partial class PawnController : EntityComponent<Pawn>
 
         UpdateEnergy();
         UpdateGroundEntity();
+
+        if (Grounded && wasGrounded)
+        {
+            // Preserve speed across ground normal changes
+            Entity.Velocity = Entity.Velocity.ProjectZ(ClippingNormal);
+        }
+
         AddAcceleration(Vector3.Down * Gravity);
 
         if (Grounded)
