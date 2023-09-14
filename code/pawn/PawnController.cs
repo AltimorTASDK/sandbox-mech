@@ -214,10 +214,15 @@ public partial class PawnController : EntityComponent<Pawn>
         Entity.GroundEntity = GroundTrace.Entity;
     }
 
-    protected bool IsValidGroundNormal(Vector3 normal)
+    protected bool IsValidGroundNormal(Vector3 normal, bool checkAngle = true, bool checkVelocity = true)
     {
-        var maxDot = IsJetting ? 0 : MaxGroundVelocityDot;
-        return normal.Angle(Vector3.Up) <= GroundAngle && Entity.Velocity.Dot(normal) < maxDot;
+        if (checkAngle && normal.Angle(Vector3.Up) > GroundAngle)
+            return false;
+
+        if (checkVelocity && Entity.Velocity.Dot(normal) >= (IsJetting ? 0 : MaxGroundVelocityDot))
+            return false;
+
+        return true;
     }
 
     public bool HasEvent(string eventName) => ControllerEvents.Contains(eventName);

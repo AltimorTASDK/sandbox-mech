@@ -1,6 +1,5 @@
 using Sandbox;
 using System;
-using System.Collections.Generic;
 
 namespace MyGame;
 
@@ -31,7 +30,7 @@ public partial class PawnController : EntityComponent<Pawn>
     private static Vector3 ClipVelocity(Vector3 velocity, Vector3 normal)
     {
         // Overclip to 1 u/s away from the surface like Source
-        return velocity - normal * (velocity.Dot(normal) + 1f);
+        return velocity - normal * (velocity.Dot(normal) - 1f);
     }
 
     private TraceResult TraceFromTo(Vector3 start, Vector3 end)
@@ -60,6 +59,15 @@ public partial class PawnController : EntityComponent<Pawn>
 
         if (!trace.Hit || trace.StartedSolid || !IsValidGroundNormal(GetClippingNormal(trace)))
             return position;
+
+        if (!IsValidGroundNormal(trace.Normal.Normal2D(), checkAngle: false))
+        {
+            var checkStart = trace.EndPosition + trace.Normal.Normal2D() * Entity.Radius;
+            var checkEnd = checkStart + Vector3.Down * StepSize;
+
+            if (!Entity.TraceCapsule(checkStart, checkEnd).Hit)
+                return position;
+        }
 
         return trace.EndPosition;
     }
@@ -97,7 +105,7 @@ public partial class PawnController : EntityComponent<Pawn>
             else
                 break;
 
-            if (canStep)
+            if (canStep && moveDelta.Length2DSquared() > 0f)
             {
                 var wallNormal = GetClippingNormal(trace, biasToWall: true);
 
@@ -110,9 +118,13 @@ public partial class PawnController : EntityComponent<Pawn>
                 }
             }
 
-            if (lastNormal == null)
+            if (lastNormal == null || lastNormal.Value.Dot(trace.Normal) > 0f)
             {
-                state.Velocity = ClipVelocity(state.Velocity, trace.Normal);
+                state.Velocity = ClipVelocity(state.Velocity, GetClippingNormal(trace));
+
+                // Clip against capsule normal if still opposed
+                if (state.Velocity.Dot(trace.Normal) < 0f)
+                    state.Velocity = ClipVelocity(state.Velocity, trace.Normal);
             }
             else
             {
