@@ -1,5 +1,4 @@
-﻿using Microsoft.VisualBasic;
-using Sandbox;
+﻿using Sandbox;
 using System;
 using System.Collections.Generic;
 
@@ -72,20 +71,18 @@ public partial class PawnController : EntityComponent<Pawn>
         var moveVector = Rotation.From(angles) * movement;
         var wasGrounded = Grounded;
 
-        UpdateGroundEntity();
-
-        if (Grounded && !wasGrounded)
-            AddEvent("grounded");
-
         if (IsJetting)
             DoJet(moveVector);
 
         UpdateEnergy();
         AddAcceleration(Vector3.Down * Gravity);
-        CheckToLeaveGround();
+        UpdateGroundEntity();
 
         if (Grounded)
         {
+            if (!wasGrounded)
+                AddEvent("grounded");
+
             var traction = GetTraction();
             var adjustedFriction = Friction * traction;
             var adjustedAcceleration = AirAcceleration.LerpTo(Acceleration, traction);
@@ -199,27 +196,21 @@ public partial class PawnController : EntityComponent<Pawn>
     protected void UpdateGroundEntity()
     {
         GroundTrace = Entity.TraceCapsule(Entity.Position, Entity.Position + Vector3.Down, 2f);
-
-        if (!GroundTrace.Hit || !IsValidGroundNormal(GroundTrace.Normal))
-            return;
-
         ClippingNormal = GetClippingNormal(GroundTrace);
-        Entity.GroundEntity = GroundTrace.Entity;
-    }
 
-    /// <summary>
-    /// Check to leave the ground after a velocity update using the cached trace
-    /// </summary>
-    protected void CheckToLeaveGround()
-    {
-        if (Grounded && !IsValidGroundNormal(GroundNormal))
+        if (!GroundTrace.Hit || !IsValidGroundNormal(ClippingNormal))
+        {
             Entity.GroundEntity = null;
+            return;
+        }
+
+        Entity.GroundEntity = GroundTrace.Entity;
     }
 
     protected bool IsValidGroundNormal(Vector3 normal)
     {
-        return GroundTrace.Normal.Angle(Vector3.Up) <= GroundAngle &&
-            Entity.Velocity.Dot(normal) < (IsJetting ? 0 : MaxGroundVelocityDot);
+        var maxDot = IsJetting ? 0 : MaxGroundVelocityDot;
+        return normal.Angle(Vector3.Up) <= GroundAngle && Entity.Velocity.Dot(normal) < maxDot;
     }
 
     public bool HasEvent(string eventName) => ControllerEvents.Contains(eventName);

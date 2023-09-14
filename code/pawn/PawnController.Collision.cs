@@ -58,7 +58,7 @@ public partial class PawnController : EntityComponent<Pawn>
         // Now trace down from a known safe position
         trace = Entity.TraceCapsule(start, end);
 
-        if (!trace.Hit || trace.StartedSolid || !IsValidGroundNormal(trace.Normal))
+        if (!trace.Hit || trace.StartedSolid || !IsValidGroundNormal(GetClippingNormal(trace)))
             return position;
 
         return trace.EndPosition;
@@ -81,10 +81,11 @@ public partial class PawnController : EntityComponent<Pawn>
 
         for (var iterations = 0; iterations < maxIterations; iterations++)
         {
-            if (state.Velocity.IsNearZeroLength || state.FractionRemaining <= 1e-4f)
-                break;
-
             var moveDelta = state.Velocity * deltaTime * state.FractionRemaining;
+
+            if (moveDelta.IsNearZeroLength)
+                return 1f;
+
             var trace = TraceMove(state, moveDelta);
 
             state.FractionRemaining *= 1f - trace.Fraction;
