@@ -70,8 +70,8 @@ public partial class PawnController : EntityComponent<Pawn>
 
         if (TryMove(state, deltaTime) > 0f)
         {
-            Entity.Position = Grounded ? StayOnGround(state.Position) : state.Position;
             Entity.Velocity = state.Velocity;
+            Entity.Position = Grounded ? StayOnGround(state.Position) : state.Position;
         }
     }
 

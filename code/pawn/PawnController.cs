@@ -28,7 +28,7 @@ public partial class PawnController : EntityComponent<Pawn>
     /// <summary>
     /// The maximum dot product between the velocity and ground normal before the ground is no longer valid.
     /// </summary>
-    public const float MaxGroundVelocityDot = 100f;
+    public const float MaxGroundVelocityDot = 200f;
 
     public float MaxEnergy => 30f;
 
@@ -75,8 +75,8 @@ public partial class PawnController : EntityComponent<Pawn>
             DoJet(moveVector);
 
         UpdateEnergy();
-        AddAcceleration(Vector3.Down * Gravity);
         UpdateGroundEntity();
+        AddAcceleration(Vector3.Down * Gravity);
 
         if (Grounded)
         {
