@@ -13,9 +13,9 @@ public partial class PawnController : EntityComponent<Pawn>
     public const float Gravity = 800f;
     public const float Friction = 4f;
     public const float MaxSpeed = 400f;
-    public const float Acceleration = 5f;
+    public const float Acceleration = 5.5f;
     public const float AirAcceleration = .5f;
-    public const float StopSpeed = 100f;
+    public const float StopSpeed = 150f;
     public const float SlipSpeed = 500f;
 
     public const float JetEnergyCutoff = 5f;
