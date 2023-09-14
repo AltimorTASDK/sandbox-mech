@@ -16,7 +16,7 @@
         <label @ref=PositionLabel></label>
         <label @ref=VelocityLabel></label>
         <label @ref=NormalLabel></label>
-        <label @ref=SNormalLabel></label>
+        <label @ref=ClipNormLabel></label>
     </div>
     <div class="center-panel">
         <div class="bar-background">
@@ -44,7 +44,7 @@
     public Label PositionLabel { get; set; }
     public Label VelocityLabel { get; set; }
     public Label NormalLabel { get; set; }
-    public Label SNormalLabel { get; set; }
+    public Label ClipNormLabel { get; set; }
 
     public override void Tick()
     {
@@ -61,7 +61,7 @@
             PositionLabel.Text = $"Position: ({FormatVector(pawn.Position)})";
             VelocityLabel.Text = $"Velocity: ({FormatVector(pawn.Velocity)})";
             NormalLabel.Text   = $"Normal:   ({FormatVector(controller.GroundNormal)})";
-            SNormalLabel.Text  = $"SNormal:  ({FormatVector(controller.ClippingNormal)})";
+            ClipNormLabel.Text = $"ClipNorm: ({FormatVector(controller.ClippingNormal)})";
         }
     }
 
