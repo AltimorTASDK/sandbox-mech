@@ -29,8 +29,7 @@ public partial class PawnController : EntityComponent<Pawn>
 
     private static Vector3 ClipVelocity(Vector3 velocity, Vector3 normal)
     {
-        // Overclip to 1 u/s away from the surface like Source
-        return velocity - normal * (velocity.Dot(normal) - 1f);
+        return velocity - normal * velocity.Dot(normal);
     }
 
     private TraceResult TraceFromTo(Vector3 start, Vector3 end)
@@ -92,18 +91,20 @@ public partial class PawnController : EntityComponent<Pawn>
             var moveDelta = state.Velocity * deltaTime * state.FractionRemaining;
 
             if (moveDelta.IsNearZeroLength)
-                return 1f;
+            {
+                state.FractionRemaining = 0f;
+                break;
+            }
 
             var trace = TraceMove(state, moveDelta);
 
-            state.FractionRemaining *= 1f - trace.Fraction;
-
-            // There's a bug with sweeping where sometimes the end position is starting in solid, so we get stuck.
-            // Push back by a small margin so this should never happen.
-            if (trace.Hit)
-                state.Position += trace.Normal * .03125f;
-            else
+            if (!trace.Hit)
+            {
+                state.FractionRemaining = 0f;
                 break;
+            }
+
+            state.FractionRemaining *= 1f - trace.Fraction;
 
             if (canStep && moveDelta.Length2DSquared() > 0f)
             {
