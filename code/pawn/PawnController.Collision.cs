@@ -155,7 +155,13 @@ public partial class PawnController : EntityComponent<Pawn>
                 }
             }
 
-            if (lastNormal == null || lastNormal.Value.Dot(trace.Normal) > 0f)
+            if (iterations == 0 && Grounded && trace.Normal == GroundNormal)
+            {
+                // Special case where the difference between capsule normal and clipping normal
+                // caused an immediate ground collision and it couldn't be resolved by stepping
+                state.Velocity = state.Velocity.ProjectZ(trace.Normal);
+            }
+            else if (lastNormal == null || lastNormal.Value.Dot(trace.Normal) > 0f)
             {
                 state.Velocity = ClipVelocity(state.Velocity, GetClippingNormal(trace));
 
