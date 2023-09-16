@@ -27,19 +27,57 @@ public partial class PawnController : EntityComponent<Pawn>
         }
     };
 
+
+    // Engine coordinate precision for networking and collision
+    private const float DIST_EPSILON = .03125f;
+
     private static Vector3 ClipVelocity(Vector3 velocity, Vector3 normal)
     {
-        return velocity - normal * velocity.Dot(normal);
+        velocity -= normal * velocity.Dot(normal);
+
+        // Ensure velocity isn't rounded towards the plane
+        var adjust = velocity.Dot(normal);
+        if (adjust < 0f)
+            velocity -= normal * adjust.Min(-DIST_EPSILON);
+
+        return velocity;
     }
 
-    private TraceResult TraceFromTo(Vector3 start, Vector3 end)
+    private TraceResult UnsafeTrace(Vector3 start, Vector3 end) => Entity.TraceCapsule(start, end);
+    private TraceResult UnsafeTrace(Vector3 point) => UnsafeTrace(point, point);
+
+    private TraceResult SafeTrace(Vector3 start, Vector3 end)
     {
-        return Entity.CapsuleTrace.FromTo(start, end).Run();
+        var trace = UnsafeTrace(start, end);
+
+        // Source has precision issues that can cause swept traces to end inside geometry
+        // Check if we're going to get stuck using unswept traces
+        if (trace.Fraction == 0f || !UnsafeTrace(trace.EndPosition).Hit)
+            return trace;
+
+        trace.Hit = true;
+
+        if (trace.Distance > DIST_EPSILON)
+        {
+            // Try to adjust for engine collision precision
+            trace.EndPosition -= trace.Direction * DIST_EPSILON;
+
+            if (!UnsafeTrace(trace.EndPosition).Hit)
+            {
+                trace.Fraction -= DIST_EPSILON / start.Distance(end);
+                return trace;
+            }
+        }
+
+        // Collide in place and allow TryMove to avoid this surface
+        trace.EndPosition = start;
+        trace.Fraction = 0f;
+        return trace;
     }
 
     private TraceResult TraceMove(MoveState state, Vector3 delta)
     {
-        var trace = TraceFromTo(state.Position, state.Position + delta);
+        var trace = SafeTrace(state.Position, state.Position + delta);
         state.Position = trace.EndPosition;
         return trace;
     }
@@ -50,21 +88,21 @@ public partial class PawnController : EntityComponent<Pawn>
         var end = position + Vector3.Down * StepSize;
 
         // See how far up we can go without getting stuck
-        var trace = Entity.TraceCapsule(position, start);
-        start = trace.EndPosition;
+        var trace = SafeTrace(position, start);
 
         // Now trace down from a known safe position
-        trace = Entity.TraceCapsule(start, end);
+        trace = SafeTrace(trace.EndPosition, end);
 
         if (!trace.Hit || trace.StartedSolid || !IsValidGroundNormal(GetClippingNormal(trace)))
             return position;
 
         if (!IsValidGroundNormal(trace.Normal.Normal2D(), checkAngle: false))
         {
+            // Only hug ledges if we can step down
             var checkStart = trace.EndPosition + trace.Normal.Normal2D() * Entity.Radius;
             var checkEnd = checkStart + Vector3.Down * StepSize;
 
-            if (!Entity.TraceCapsule(checkStart, checkEnd).Hit)
+            if (!UnsafeTrace(checkStart, checkEnd).Hit)
                 return position;
         }
 
@@ -113,9 +151,7 @@ public partial class PawnController : EntityComponent<Pawn>
                 if (wallNormal.Angle(Vector3.Up) > StepGroundAngle)
                 {
                     if (TryStep(state, wallNormal, deltaTime))
-                    {
                         continue;
-                    }
                 }
             }
 
